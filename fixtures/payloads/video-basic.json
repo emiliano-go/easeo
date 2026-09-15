@@ -1,0 +1,21 @@
+{
+  "input": {
+    "entity": {
+      "entity_type": "video",
+      "title": "Product Demo",
+      "excerpt": "Watch our product demo video.",
+      "image": "https://example.com/images/video-thumbnail.jpg"
+    },
+    "route": "/videos/product-demo",
+    "config": {
+      "canonical_host": "example.com",
+      "public_base_url": "https://example.com"
+    }
+  },
+  "expected": {
+    "title": "Product Demo",
+    "description": "Watch our product demo video.",
+    "canonical": "https://example.com/videos/product-demo",
+    "robots": "index,follow"
+  }
+}

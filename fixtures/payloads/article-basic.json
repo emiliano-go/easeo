@@ -1,0 +1,31 @@
+{
+  "input": {
+    "entity": {
+      "entity_type": "post",
+      "title": "Hello World",
+      "excerpt": "An example blog post."
+    },
+    "route": "/blog/hello-world",
+    "config": {
+      "canonical_host": "example.com",
+      "public_base_url": "https://example.com"
+    }
+  },
+  "expected": {
+    "title": "Hello World",
+    "description": "An example blog post.",
+    "canonical": "https://example.com/blog/hello-world",
+    "robots": "index,follow",
+    "og": {
+      "type": "article",
+      "title": "Hello World",
+      "description": "An example blog post.",
+      "url": "https://example.com/blog/hello-world"
+    },
+    "twitter": {
+      "card": "summary_large_image",
+      "title": "Hello World",
+      "description": "An example blog post."
+    }
+  }
+}

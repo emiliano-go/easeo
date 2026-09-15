@@ -1,0 +1,21 @@
+{
+  "input": {
+    "entity": {
+      "entity_type": "home",
+      "title": "Home Page",
+      "excerpt": "Welcome to our website.",
+      "image": "https://example.com/images/hero.jpg"
+    },
+    "route": "/",
+    "config": {
+      "canonical_host": "example.com",
+      "public_base_url": "https://example.com"
+    }
+  },
+  "expected": {
+    "title": "Home Page",
+    "description": "Welcome to our website.",
+    "canonical": "https://example.com/",
+    "robots": "index,follow"
+  }
+}

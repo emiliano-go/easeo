@@ -1,0 +1,20 @@
+{
+  "input": {
+    "entity": {
+      "entity_type": "taxonomy",
+      "title": "Blog Categories",
+      "excerpt": "Browse our blog categories."
+    },
+    "route": "/blog/categories",
+    "config": {
+      "canonical_host": "example.com",
+      "public_base_url": "https://example.com"
+    }
+  },
+  "expected": {
+    "title": "Blog Categories",
+    "description": "Browse our blog categories.",
+    "canonical": "https://example.com/blog/categories",
+    "robots": "index,follow"
+  }
+}

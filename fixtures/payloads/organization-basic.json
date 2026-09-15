@@ -1,0 +1,21 @@
+{
+  "input": {
+    "entity": {
+      "entity_type": "organization",
+      "title": "Example Corp",
+      "excerpt": "A example organization.",
+      "same_as": ["https://twitter.com/example", "https://github.com/example"]
+    },
+    "route": "/about",
+    "config": {
+      "canonical_host": "example.com",
+      "public_base_url": "https://example.com"
+    }
+  },
+  "expected": {
+    "title": "Example Corp",
+    "description": "A example organization.",
+    "canonical": "https://example.com/about",
+    "robots": "index,follow"
+  }
+}

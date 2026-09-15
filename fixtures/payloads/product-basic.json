@@ -1,0 +1,24 @@
+{
+  "input": {
+    "entity": {
+      "entity_type": "product",
+      "title": "Widget",
+      "excerpt": "A useful widget.",
+      "sku": "WIDGET-001",
+      "price": "29.99",
+      "price_currency": "USD",
+      "availability": "InStock"
+    },
+    "route": "/products/widget",
+    "config": {
+      "canonical_host": "example.com",
+      "public_base_url": "https://example.com"
+    }
+  },
+  "expected": {
+    "title": "Widget",
+    "description": "A useful widget.",
+    "canonical": "https://example.com/products/widget",
+    "robots": "index,follow"
+  }
+}

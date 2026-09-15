@@ -1,0 +1,20 @@
+{
+  "input": {
+    "entity": {
+      "entity_type": "search",
+      "title": "Search Results",
+      "excerpt": "Search results for your query."
+    },
+    "route": "/search?q=test",
+    "config": {
+      "canonical_host": "example.com",
+      "public_base_url": "https://example.com"
+    }
+  },
+  "expected": {
+    "title": "Search Results",
+    "description": "Search results for your query.",
+    "canonical": "https://example.com/search",
+    "robots": "noindex,follow"
+  }
+}

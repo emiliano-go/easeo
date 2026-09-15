@@ -1,0 +1,20 @@
+{
+  "input": {
+    "entity": {
+      "entity_type": "page",
+      "title": "About Us",
+      "excerpt": "Learn more about our company."
+    },
+    "route": "/about",
+    "config": {
+      "canonical_host": "example.com",
+      "public_base_url": "https://example.com"
+    }
+  },
+  "expected": {
+    "title": "About Us",
+    "description": "Learn more about our company.",
+    "canonical": "https://example.com/about",
+    "robots": "index,follow"
+  }
+}

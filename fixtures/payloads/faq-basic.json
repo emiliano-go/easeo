@@ -1,0 +1,24 @@
+{
+  "input": {
+    "entity": {
+      "entity_type": "faq",
+      "title": "FAQ Page",
+      "excerpt": "Frequently asked questions.",
+      "faq_items": [
+        {"question": "What is easeo?", "answer": "easeo is a deterministic SEO payload generation library."},
+        {"question": "How do I install it?", "answer": "pip install easeo or npm install @easeo/core"}
+      ]
+    },
+    "route": "/faq",
+    "config": {
+      "canonical_host": "example.com",
+      "public_base_url": "https://example.com"
+    }
+  },
+  "expected": {
+    "title": "FAQ Page",
+    "description": "Frequently asked questions.",
+    "canonical": "https://example.com/faq",
+    "robots": "index,follow"
+  }
+}
