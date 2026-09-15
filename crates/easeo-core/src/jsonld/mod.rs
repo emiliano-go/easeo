@@ -1,14 +1,14 @@
 pub mod article;
-pub mod product;
-pub mod organization;
-pub mod local_business;
-pub mod faq;
-pub mod website;
 pub mod breadcrumb;
+pub mod faq;
+pub mod local_business;
+pub mod organization;
+pub mod product;
 pub mod registry;
+pub mod website;
 
-use crate::entity::SEOEntity;
 use crate::config::SEOConfig;
+use crate::entity::SEOEntity;
 use crate::error::EaseoError;
 use registry::SchemaRegistry;
 
@@ -23,7 +23,11 @@ pub struct SchemaContext<'a> {
 }
 
 pub fn build_schema(ctx: &SchemaContext) -> Result<Option<serde_json::Value>, EaseoError> {
-    let schema_type = match ctx.config.schema_type_map.get(ctx.entity.entity_type.as_str()) {
+    let schema_type = match ctx
+        .config
+        .schema_type_map
+        .get(ctx.entity.entity_type.as_str())
+    {
         Some(Some(t)) => t.clone(),
         Some(None) => return Ok(None),
         None => return Ok(None),
@@ -67,7 +71,16 @@ pub(crate) fn base_schema(
         schema["description"] = serde_json::Value::String(desc.to_string());
     }
     if let Some(img) = ctx.og_image {
-        schema["image"] = serde_json::Value::String(img.to_string());
+        let img_url = if img.starts_with("http://") || img.starts_with("https://") {
+            img.to_string()
+        } else {
+            format!(
+                "{}{}",
+                ctx.config.public_base_url.trim_end_matches('/'),
+                img
+            )
+        };
+        schema["image"] = serde_json::Value::String(img_url);
     }
     if let Some(ref pub_date) = ctx.entity.published_at {
         schema["datePublished"] = serde_json::Value::String(pub_date.clone());
@@ -87,7 +100,16 @@ pub(crate) fn base_schema(
             "name": name,
         });
         if let Some(ref logo) = ctx.config.publisher_logo {
-            publisher["logo"] = serde_json::Value::String(logo.clone());
+            let logo_url = if logo.starts_with("http://") || logo.starts_with("https://") {
+                logo.clone()
+            } else {
+                format!(
+                    "{}{}",
+                    ctx.config.public_base_url.trim_end_matches('/'),
+                    logo
+                )
+            };
+            publisher["logo"] = serde_json::Value::String(logo_url);
         }
         schema["publisher"] = publisher;
     }
