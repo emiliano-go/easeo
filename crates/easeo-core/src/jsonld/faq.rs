@@ -1,5 +1,5 @@
+use super::{base_schema, SchemaContext};
 use crate::error::EaseoError;
-use super::{SchemaContext, base_schema};
 
 pub fn build_faq_page(ctx: &SchemaContext) -> Result<serde_json::Value, EaseoError> {
     let mut schema = base_schema("FAQPage", ctx)?;
