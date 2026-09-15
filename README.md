@@ -183,14 +183,22 @@ Site-wide configuration.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `canonical_host` | `str` | Canonical hostname, e.g. `"example.com"` |
-| `public_base_url` | `str` | Full base URL for path resolution |
-| `default_title` | `str \| None` | Fallback title when entity has none |
-| `default_description` | `str \| None` | Fallback description |
-| `default_og_image` | `str \| None` | Fallback OG image URL |
-| `title_template` | `str \| None` | Template for title, e.g. `"%s | My Site"` |
-| `robots` | `Robots \| None` | Default robots directives |
-| `schema_type_map` | `dict \| None` | Override entity-to-Schema.org type mapping |
+| `canonical_host` | `str` | Canonical hostname, e.g. `"example.com"` (host only, no scheme) |
+| `public_base_url` | `str` | Full base URL for path resolution, e.g. `"https://example.com"` |
+| `url_policy` | `URLPolicy \| None` | URL normalization policy (HTTPS, lowercase, trailing slash, tracking params) |
+| `default_robots` | `Robots \| None` | Default robots directives for regular pages |
+| `search_robots` | `Robots \| None` | Robots directives for search-type pages (default: noindex,follow) |
+| `default_og_image` | `SEOImage \| None` | Fallback OG image |
+| `site_name` | `str \| None` | Site name (og:site_name, title template) |
+| `title_template` | `str \| None` | Template for titles, e.g. `"{title} - My Site"` |
+| `publisher_name` | `str \| None` | Organization/publisher name for schemas |
+| `publisher_logo` | `str \| None` | Publisher logo URL for schemas |
+| `locale` | `str \| None` | og:locale, e.g. `"en_US"` |
+| `locale_alternate` | `list[str] \| None` | Alternate locales |
+| `twitter_site` | `str \| None` | Twitter @handle for twitter:site |
+| `auto_generate_schema` | `bool` | Auto-generate JSON-LD from entity type (default: `True`) |
+| `emit_warnings` | `bool` | Collect validation warnings (default: `False`) |
+| `schema_type_map` | `dict \| None` | Override entity-type → Schema.org type mapping |
 
 ---
 
@@ -203,12 +211,21 @@ Content entity representation.
 | `entity_type` | `str` | One of: `home`, `post`, `page`, `video`, `taxonomy`, `search`, `product`, `organization`, `local_business`, `faq`, `other` |
 | `title` | `str \| None` | Page title |
 | `excerpt` | `str \| None` | Short description |
-| `featured_image` | `str \| None` | Primary image URL |
-| `url` | `str \| None` | Explicit URL override |
-| `og` | `OGOverrides \| None` | Open Graph overrides |
-| `twitter` | `TwitterOverrides \| None` | Twitter Card overrides |
-| `breadcrumbs` | `list[Breadcrumb] \| None` | Breadcrumb trail |
-| `schema_extra` | `dict \| None` | Additional JSON-LD properties |
+| `slug` | `str \| None` | Entity slug |
+| `body_html` | `str \| None` | Full content (used to derive a description snippet when no excerpt) |
+| `status` | `str \| None` | Publication status (non-published → noindex) |
+| `featured_image` | `SEOImage \| None` | Primary image |
+| `published_at` | `str \| None` | ISO date/datetime |
+| `updated_at` | `str \| None` | ISO date/datetime |
+| `author_name` | `str \| None` | Author display name |
+| `breadcrumbs` | `list[Breadcrumb] \| None` | Breadcrumb trail (appended as BreadcrumbList JSON-LD) |
+| `faq_items` | `list[FAQItem] \| None` | FAQ entries (FAQPage schema) |
+| `sku` | `str \| None` | Product SKU |
+| `price` | `str \| None` | Product price |
+| `price_currency` | `str \| None` | ISO currency code, e.g. `"USD"` |
+| `availability` | `str \| None` | Product availability |
+| `same_as` | `list[str] \| None` | sameAs URLs (Organization schema) |
+| `address` | `str \| None` | Address (LocalBusiness schema) |
 
 ---
 
@@ -221,7 +238,7 @@ The output. Structured, hashable, renderable.
 | `title` | `str` | Resolved title |
 | `description` | `str` | Resolved description |
 | `canonical` | `str` | Normalized canonical URL |
-| `robots` | `Robots` | Resolved robots directives |
+| `robots` | `str` | Resolved robots directives, e.g. `"index,follow"` |
 | `og` | `OGPayload` | Open Graph metadata |
 | `twitter` | `TwitterPayload` | Twitter Card metadata |
 | `schema_jsonld` | `dict \| None` | JSON-LD structured data |
@@ -231,25 +248,36 @@ The output. Structured, hashable, renderable.
 | Method | Description |
 |--------|-------------|
 | `render_html()` | Full `<head>` HTML snippet |
+| `render_opengraph()` | OG meta tags only |
+| `render_twitter()` | Twitter meta tags only |
+| `render_jsonld()` | JSON-LD `<script>` tag only (with `</script>`-safe escaping) |
 | `to_dict()` | Payload as dictionary |
 | `hash()` | SHA-256 hash of the payload |
-| `etag()` | HTTP ETag string |
+| `etag()` | HTTP ETag string (quoted) |
 
 ---
 
-### `SchemaRegistry`
+### Custom JSON-LD schemas
 
-Register custom Schema.org types for arbitrary entity types.
+Register a custom Schema.org type per page via overrides:
 
 ```python
-from easeo import SchemaRegistry
+from easeo import SEOOverrides, build_seo_payload_with_overrides
 
-registry = SchemaRegistry()
-registry.register("Podcast", lambda entity, config, canonical, title, desc, og: {
-    "@type": "Podcast",
-    "name": title,
-})
+payload = build_seo_payload_with_overrides(
+    entity,
+    "/podcast/ep-1",
+    config,
+    SEOOverrides(schema_jsonld={
+        "@context": "https://schema.org",
+        "@type": "Podcast",
+        "name": "My Podcast",
+    }),
+)
 ```
+
+In Rust, custom types can also be registered globally with `SchemaRegistry::register(type, builder)`.
+(Python/JS can't store callables in the Rust registry — `SchemaRegistry.register()` raises there by design; use `schema_jsonld` overrides instead.)
 
 ---
 
@@ -288,16 +316,6 @@ policy = URLPolicy(
     strip_tracking_params=True,
     allowed_query_params=["page", "q"],
 )
-```
-
----
-
-### `build_seo_payload_async(entity, route_path, config)`
-
-Async variant. Useful for async framework integrations.
-
-```python
-payload = await build_seo_payload_async(entity, "/blog/hello", config)
 ```
 
 ---
@@ -354,20 +372,27 @@ cargo build --release
 
 # Python bindings
 pip install maturin
-maturin develop -p easeo-python
+maturin develop -m crates/easeo-python/Cargo.toml
 
 # Node bindings
-cd crates/easeo-node
-napi build --release
+cd packages/core
+napi build --release --manifest-path ../../crates/easeo-node/Cargo.toml
+cp ../../crates/easeo-node/*.node .
 ```
 
 ### Test
 
 ```bash
 # Rust tests
-cargo test -p easeo-core
+cargo test --workspace
 
-# Python conformance
+# Python tests
+pytest tests/python/
+
+# JavaScript tests
+node --test tests/javascript/*.cjs
+
+# Cross-language conformance
 python tests/conformance/test_conformance.py
 ```
 
