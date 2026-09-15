@@ -1,0 +1,22 @@
+[workspace]
+members = [
+    "crates/easeo-core",
+    "crates/easeo-python",
+    "crates/easeo-node",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/emiliano-go/easeo"
+description = "Deterministic SEO payload generation for content platforms"
+
+[workspace.dependencies]
+easeo-core = { path = "crates/easeo-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+url = "2"
+sha2 = "0.10"
+thiserror = "2"
