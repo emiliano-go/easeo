@@ -2,26 +2,75 @@ use std::collections::BTreeMap;
 
 pub const DEFAULT_PATTERNS: &[&str] = &[
     // UTM parameters
-    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
-    "utm_id", "utm_cid", "utm_reader", "utm_name", "utm_social", "utm_social-type",
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_term",
+    "utm_content",
+    "utm_id",
+    "utm_cid",
+    "utm_reader",
+    "utm_name",
+    "utm_social",
+    "utm_social-type",
     // Social tracking
-    "fbclid", "gclid", "gclsrc", "dclid",
-    "msclkid", "twclid", "igclid", "ttclid", "li_fat_id",
+    "fbclid",
+    "gclid",
+    "gclsrc",
+    "dclid",
+    "msclkid",
+    "twclid",
+    "igclid",
+    "ttclid",
+    "li_fat_id",
     // Referral
-    "ref", "source", "mc_cid", "mc_eid",
+    "ref",
+    "source",
+    "mc_cid",
+    "mc_eid",
     // Analytics
-    "_ga", "_gl", "_gac", "_gu", "_kx", "_hsenc", "_hsmi",
-    "_openstat", "vero_id", "wickedid", "yclid",
+    "_ga",
+    "_gl",
+    "_gac",
+    "_gu",
+    "_kx",
+    "_hsenc",
+    "_hsmi",
+    "_openstat",
+    "vero_id",
+    "wickedid",
+    "yclid",
     // Cache busting
-    "cb", "rand", "timestamp", "t", "_t",
+    "cb",
+    "rand",
+    "timestamp",
+    "t",
+    "_t",
     // Session
-    "sid", "phpsessid", "jsessionid", "asp.net_sessionid",
+    "sid",
+    "phpsessid",
+    "jsessionid",
+    "asp.net_sessionid",
     // Redirect
-    "next", "return", "redirect", "redirect_to", "redirect_url", "goto",
+    "next",
+    "return",
+    "redirect",
+    "redirect_to",
+    "redirect_url",
+    "goto",
     // Affiliate / marketing
-    "aff", "aff_id", "click_id", "tag", "keyword", "campaign",
+    "aff",
+    "aff_id",
+    "click_id",
+    "tag",
+    "keyword",
+    "campaign",
     // Misc tracking
-    "ncid", "zanpid", "zanphp", "msclkid_extra", "twclid_extra",
+    "ncid",
+    "zanpid",
+    "zanphp",
+    "msclkid_extra",
+    "twclid_extra",
 ];
 
 pub struct CleanResult {
@@ -85,7 +134,7 @@ pub fn clean_query(query: &str) -> String {
     }
 }
 
-fn is_tracking_param(key: &str) -> bool {
+pub(crate) fn is_tracking_param(key: &str) -> bool {
     let lower = key.to_lowercase();
     DEFAULT_PATTERNS.iter().any(|&p| p == lower)
 }
