@@ -44,6 +44,8 @@ from easeo._easeo_native import (
     clean_query_fn as clean_query,
 )
 
+from easeo.builder import SEOEntityBuilder
+
 __all__ = [
     # Exceptions
     "EaseoError",
@@ -71,6 +73,7 @@ __all__ = [
     "SEOExpectation",
     "SEOIssue",
     "SchemaRegistry",
+    "SEOEntityBuilder",
     # Functions
     "build_seo_payload",
     "build_seo_payload_with_overrides",
