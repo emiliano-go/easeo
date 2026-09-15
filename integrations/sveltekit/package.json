@@ -2,10 +2,30 @@
   "name": "@easeo/sveltekit",
   "version": "0.1.0",
   "description": "easeo integration for SvelteKit",
+  "type": "module",
   "main": "index.js",
   "types": "index.d.ts",
+  "svelte": "./index.js",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "svelte": "./index.js",
+      "import": "./index.js",
+      "default": "./index.js"
+    },
+    "./EaseoHead.svelte": {
+      "svelte": "./EaseoHead.svelte",
+      "default": "./EaseoHead.svelte"
+    }
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "EaseoHead.svelte"
+  ],
   "license": "MIT",
   "peerDependencies": {
-    "@easeo/core": "^0.1.0"
+    "@easeo/core": "^0.1.0",
+    "svelte": ">=4.0.0"
   }
 }
