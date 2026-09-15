@@ -1,0 +1,12 @@
+{
+  "name": "@easeo/next",
+  "version": "0.1.0",
+  "description": "easeo integration for Next.js",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "license": "MIT",
+  "peerDependencies": {
+    "@easeo/core": "^0.1.0",
+    "next": ">=13.0.0"
+  }
+}

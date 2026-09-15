@@ -1,0 +1,12 @@
+{
+  "name": "@easeo/vite",
+  "version": "0.1.0",
+  "description": "easeo integration for Vite",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "license": "MIT",
+  "peerDependencies": {
+    "@easeo/core": "^0.1.0",
+    "vite": ">=4.0.0"
+  }
+}

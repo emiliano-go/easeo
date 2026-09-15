@@ -1,0 +1,12 @@
+{
+  "name": "@easeo/astro",
+  "version": "0.1.0",
+  "description": "easeo integration for Astro",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "license": "MIT",
+  "peerDependencies": {
+    "@easeo/core": "^0.1.0",
+    "astro": ">=3.0.0"
+  }
+}
