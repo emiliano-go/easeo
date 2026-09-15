@@ -135,7 +135,8 @@ def test_url_normalization():
     )
 
     payload = build_seo_payload(entity, "//double//slashes", config)
-    assert "//" not in payload.canonical
+    assert "//double//slashes" not in payload.canonical
+    assert payload.canonical == "https://example.com/double/slashes"
 
 
 def test_detrack():
