@@ -1,0 +1,241 @@
+name: Publish
+
+on:
+  release:
+    types: [published]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ===========================================================================
+  # CI Tests (blocker)
+  # ===========================================================================
+
+  test-rust:
+    name: Rust Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        rust: [stable, "1.75"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Check
+        run: cargo check --workspace
+      - name: Test
+        run: cargo test --workspace
+
+  test-python:
+    name: Python Tests (${{ matrix.os }}, ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install maturin
+        run: pip install maturin
+      - name: Build Python package
+        run: maturin develop --release -m crates/easeo-python/Cargo.toml
+      - name: Run Python tests
+        run: python -m pytest tests/python/ -v
+
+  test-node:
+    name: Node Tests (${{ matrix.os }}, Node ${{ matrix.node-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node-version: [18, 20]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install napi CLI
+        run: npm install -g @napi-rs/cli
+      - name: Build native module
+        run: cd packages/core && napi build --release --manifest-path ../../crates/easeo-node/Cargo.toml && cp ../../crates/easeo-node/*.node .
+      - name: Run Node tests
+        run: node --test tests/javascript/*.cjs
+
+  conformance:
+    name: Cross-Language Conformance
+    runs-on: ubuntu-latest
+    needs: [test-rust, test-python, test-node]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install dependencies
+        run: pip install maturin && npm install -g @napi-rs/cli
+      - name: Build all packages
+        run: |
+          maturin develop --release -m crates/easeo-python/Cargo.toml
+          cd packages/core && napi build --release --manifest-path ../../crates/easeo-node/Cargo.toml && cp ../../crates/easeo-node/*.node .
+      - name: Run conformance test
+        run: python tests/conformance/test_conformance.py
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --workspace -- -D warnings
+
+  # ===========================================================================
+  # Build PyPI wheels (multi-platform)
+  # ===========================================================================
+
+  build-pypi:
+    name: Build wheel (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    needs: [conformance, lint]
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: macos-13
+            target: x86_64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install maturin
+        run: pip install maturin
+      - name: Build wheel
+        run: maturin build --release --target ${{ matrix.target }} -m crates/easeo-python/Cargo.toml
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.target }}
+          path: dist/*.whl
+
+  # ===========================================================================
+  # Build npm package
+  # ===========================================================================
+
+  build-npm:
+    name: Build npm package
+    runs-on: ubuntu-latest
+    needs: [conformance, lint]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install napi CLI
+        run: npm install -g @napi-rs/cli
+      - name: Build native modules
+        run: cd packages/core && napi build --release --manifest-path ../../crates/easeo-node/Cargo.toml && cp ../../crates/easeo-node/*.node .
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-package
+          path: |
+            packages/core/index.js
+            packages/core/index.d.ts
+            packages/core/*.node
+            packages/core/package.json
+            packages/core/npm/
+
+  # ===========================================================================
+  # Publish to PyPI (OIDC trusted publishing)
+  # ===========================================================================
+
+  publish-pypi:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: build-pypi
+    environment:
+      name: pypi
+      url: https://pypi.org/project/easeo
+    permissions:
+      id-token: write
+    steps:
+      - name: Download all wheels
+        uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: dist/
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+
+  # ===========================================================================
+  # Publish to npm (OIDC trusted publishing)
+  # ===========================================================================
+
+  publish-npm:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    needs: build-npm
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/@easeo/core
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+      - run: npm install -g npm@latest
+      - name: Download npm package
+        uses: actions/download-artifact@v4
+        with:
+          name: npm-package
+          path: packages/core/
+      - name: Install napi CLI
+        run: npm install -g @napi-rs/cli
+      - name: Run prepublish
+        run: napi prepublish -t npm
+        working-directory: packages/core/
+      - name: Publish to npm
+        run: npm publish --access public --provenance
+        working-directory: packages/core/
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
