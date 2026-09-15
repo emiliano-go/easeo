@@ -1,0 +1,19 @@
+[package]
+name = "easeo-node"
+description.workspace = true
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+easeo-core.workspace = true
+napi = { version = "2", features = ["serde-json"] }
+napi-derive = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json.workspace = true
+
+[build-dependencies]
+napi-build = "2"
