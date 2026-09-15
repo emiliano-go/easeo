@@ -1,0 +1,39 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "easeo"
+version = "0.1.0"
+description = "Deterministic SEO payload generation for content platforms"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Emiliano Gandini Outeda", email = "emiliano.gandini@protonmail.com"}
+]
+keywords = ["seo", "canonical", "urls", "metadata", "open-graph", "twitter-cards", "json-ld", "schema"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+Homepage = "https://github.com/emiliano-go/easeo"
+Documentation = "https://github.com/emiliano-go/easeo#readme"
+Repository = "https://github.com/emiliano-go/easeo"
+Changelog = "https://github.com/emiliano-go/easeo/blob/main/CHANGELOG.md"
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+module-name = "easeo._easeo_native"
+python-source = "python"
