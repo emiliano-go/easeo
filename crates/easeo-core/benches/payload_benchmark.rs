@@ -23,7 +23,12 @@ fn bench_build_seo_payload(c: &mut Criterion) {
 
     c.bench_function("build_seo_payload", |b| {
         b.iter(|| {
-            build_seo_payload(black_box(&entity), black_box("/blog/benchmark"), black_box(&config)).unwrap()
+            build_seo_payload(
+                black_box(&entity),
+                black_box("/blog/benchmark"),
+                black_box(&config),
+            )
+            .unwrap()
         })
     });
 }
@@ -50,7 +55,8 @@ fn bench_build_batch(c: &mut Criterion) {
             b.iter(|| {
                 for i in 0..size {
                     let route = format!("/blog/post-{}", i);
-                    build_seo_payload(black_box(&entity), black_box(&route), black_box(&config)).unwrap();
+                    build_seo_payload(black_box(&entity), black_box(&route), black_box(&config))
+                        .unwrap();
                 }
             })
         });
@@ -75,7 +81,7 @@ fn bench_hash_payload(c: &mut Criterion) {
     let payload = build_seo_payload(&entity, "/blog/benchmark", &config).unwrap();
 
     c.bench_function("hash_payload", |b| {
-        b.iter(|| hash_payload(black_box(&payload)))
+        b.iter(|| hash_payload(black_box(&payload)).unwrap())
     });
 }
 
@@ -95,9 +101,7 @@ fn bench_render_html(c: &mut Criterion) {
 
     let payload = build_seo_payload(&entity, "/blog/benchmark", &config).unwrap();
 
-    c.bench_function("render_html", |b| {
-        b.iter(|| payload.render_html())
-    });
+    c.bench_function("render_html", |b| b.iter(|| payload.render_html().unwrap()));
 }
 
 fn bench_validate(c: &mut Criterion) {
