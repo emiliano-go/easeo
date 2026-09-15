@@ -1,5 +1,5 @@
+use super::{organization::build_organization, SchemaContext};
 use crate::error::EaseoError;
-use super::{SchemaContext, organization::build_organization};
 
 pub fn build_local_business(ctx: &SchemaContext) -> Result<serde_json::Value, EaseoError> {
     let mut schema = build_organization(ctx)?;
