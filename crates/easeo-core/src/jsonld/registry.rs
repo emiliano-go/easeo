@@ -1,5 +1,5 @@
-use std::collections::BTreeMap;
 use crate::jsonld::SchemaContext;
+use std::collections::BTreeMap;
 
 type SchemaBuilder = Box<dyn Fn(&SchemaContext) -> serde_json::Value + Send + Sync>;
 
@@ -25,10 +25,14 @@ impl SchemaRegistry {
     where
         F: Fn(&SchemaContext) -> serde_json::Value + Send + Sync + 'static,
     {
-        self.builders.insert(schema_type.to_string(), Box::new(builder));
+        self.builders
+            .insert(schema_type.to_string(), Box::new(builder));
     }
 
-    pub fn get(&self, schema_type: &str) -> Option<&(dyn Fn(&SchemaContext) -> serde_json::Value + Send + Sync)> {
+    pub fn get(
+        &self,
+        schema_type: &str,
+    ) -> Option<&(dyn Fn(&SchemaContext) -> serde_json::Value + Send + Sync)> {
         self.builders.get(schema_type).map(|b| b.as_ref())
     }
 
