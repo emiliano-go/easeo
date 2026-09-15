@@ -1,0 +1,6 @@
+{
+  "entity_type": "organization",
+  "title": "Example Corp",
+  "excerpt": "A example organization.",
+  "same_as": ["https://twitter.com/example", "https://github.com/example"]
+}

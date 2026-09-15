@@ -1,0 +1,7 @@
+{
+  "entity_type": "local_business",
+  "title": "Acme Corp",
+  "excerpt": "A local business in San Francisco.",
+  "address": "123 Main St, San Francisco, CA 94105",
+  "same_as": ["https://twitter.com/acme", "https://facebook.com/acme"]
+}

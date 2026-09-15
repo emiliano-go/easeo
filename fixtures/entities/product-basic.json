@@ -1,0 +1,9 @@
+{
+  "entity_type": "product",
+  "title": "Widget",
+  "excerpt": "A useful widget.",
+  "sku": "WIDGET-001",
+  "price": "29.99",
+  "price_currency": "USD",
+  "availability": "InStock"
+}
