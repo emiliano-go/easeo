@@ -1,4 +1,4 @@
-use crate::config::{SEOConfig, URLPolicy, TrailingSlash};
+use crate::config::{SEOConfig, TrailingSlash, URLPolicy};
 use crate::error::EaseoError;
 
 pub fn normalize_path(path: &str, policy: &URLPolicy) -> Result<String, EaseoError> {
@@ -22,7 +22,9 @@ pub fn normalize_path(path: &str, policy: &URLPolicy) -> Result<String, EaseoErr
 pub fn normalize_public_url(url_or_path: &str, config: &SEOConfig) -> Result<String, EaseoError> {
     let value = url_or_path.trim().to_string();
     if value.is_empty() {
-        return Err(EaseoError::InvalidUrl("url_or_path must be a non-empty string".to_string()));
+        return Err(EaseoError::InvalidUrl(
+            "url_or_path must be a non-empty string".to_string(),
+        ));
     }
 
     let parsed_input = url::Url::parse(&value).ok();
@@ -33,26 +35,42 @@ pub fn normalize_public_url(url_or_path: &str, config: &SEOConfig) -> Result<Str
         Some(ref input) => {
             if input.scheme().is_empty() && input.host_str().is_none() {
                 let parts: Vec<&str> = value.splitn(2, '?').collect();
-                (parts[0].to_string(), parts.get(1).unwrap_or(&"").to_string())
+                (
+                    parts[0].to_string(),
+                    parts.get(1).unwrap_or(&"").to_string(),
+                )
             } else {
-                (input.path().to_string(), input.query().unwrap_or("").to_string())
+                (
+                    input.path().to_string(),
+                    input.query().unwrap_or("").to_string(),
+                )
             }
         }
         None => {
             let parts: Vec<&str> = value.splitn(2, '?').collect();
-            (parts[0].to_string(), parts.get(1).unwrap_or(&"").to_string())
+            (
+                parts[0].to_string(),
+                parts.get(1).unwrap_or(&"").to_string(),
+            )
         }
     };
 
     let base_path = parsed_base.path().trim_end_matches('/');
     let mut route = path.clone();
-    if !base_path.is_empty()
-        && !route.starts_with(&format!("{}/", base_path)) && route != base_path
-    {
-        if route.starts_with('/') {
-            route = format!("{}{}", base_path, route);
+    if !base_path.is_empty() {
+        let already_has_base = if route == base_path {
+            true
+        } else if let Some(rest) = route.strip_prefix(base_path) {
+            rest.starts_with('/')
         } else {
-            route = format!("{}/{}", base_path, route);
+            false
+        };
+        if !already_has_base {
+            if route.starts_with('/') {
+                route = format!("{}{}", base_path, route);
+            } else {
+                route = format!("{}/{}", base_path, route);
+            }
         }
     }
 
@@ -122,18 +140,24 @@ pub(crate) fn filter_query(query: &str, policy: &URLPolicy) -> String {
         .filter_map(|pair| {
             let mut parts = pair.splitn(2, '=');
             let key = parts.next()?.to_string();
+            if key.is_empty() {
+                return None;
+            }
             let value = parts.next().unwrap_or("").to_string();
             Some((key, value))
         })
         .collect();
 
     if policy.strip_tracking_params {
-        pairs.retain(|(k, _)| !is_tracking_param(k));
+        pairs.retain(|(k, _)| !crate::detrack::is_tracking_param(k));
     }
 
     if !policy.allowed_query_params.is_empty() {
-        let allowlist: std::collections::HashSet<&str> =
-            policy.allowed_query_params.iter().map(|s| s.as_str()).collect();
+        let allowlist: std::collections::HashSet<&str> = policy
+            .allowed_query_params
+            .iter()
+            .map(|s| s.as_str())
+            .collect();
         pairs.retain(|(k, _)| allowlist.contains(k.as_str()));
     }
 
@@ -142,9 +166,4 @@ pub(crate) fn filter_query(query: &str, policy: &URLPolicy) -> String {
         .map(|(k, v)| format!("{}={}", k, v))
         .collect::<Vec<_>>()
         .join("&")
-}
-
-fn is_tracking_param(key: &str) -> bool {
-    let lower = key.to_lowercase();
-    crate::detrack::DEFAULT_PATTERNS.contains(&lower.as_str())
 }
