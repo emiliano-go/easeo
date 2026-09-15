@@ -1,5 +1,5 @@
-use crate::entity::Breadcrumb;
 use crate::config::SEOConfig;
+use crate::entity::Breadcrumb;
 use crate::url::normalize_public_url;
 
 pub fn build_breadcrumb_list(
