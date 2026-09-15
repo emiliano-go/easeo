@@ -1,0 +1,13 @@
+{
+  "input": {
+    "canonical_host": "example.com",
+    "scheme": "https"
+  },
+  "expected": {
+    "contract_version": "1",
+    "site": {
+      "canonical_host": "example.com",
+      "scheme": "https"
+    }
+  }
+}

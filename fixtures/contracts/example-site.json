@@ -1,0 +1,46 @@
+{
+  "contract_version": "1",
+  "generator": {
+    "name": "easeo",
+    "version": "0.1.0"
+  },
+  "site": {
+    "canonical_host": "example.com",
+    "scheme": "https"
+  },
+  "defaults": {
+    "indexable": true,
+    "canonical": "self",
+    "required": true
+  },
+  "rules": [
+    {
+      "match": "/blog/*",
+      "expect": {
+        "indexable": true,
+        "canonical": "self",
+        "schema": {
+          "required": true,
+          "types": ["Article"]
+        }
+      }
+    },
+    {
+      "match": "/products/*",
+      "expect": {
+        "indexable": true,
+        "canonical": "self",
+        "schema": {
+          "required": true,
+          "types": ["Product"]
+        }
+      }
+    },
+    {
+      "match": "/search/*",
+      "expect": {
+        "indexable": false
+      }
+    }
+  ]
+}
