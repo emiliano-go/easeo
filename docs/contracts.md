@@ -7,7 +7,7 @@ easeo supports machine-readable SEO contracts that describe what a site's SEO sh
 ```json
 {
   "contract_version": "1",
-  "generator": { "name": "easeo", "version": "1.0.0" },
+  "generator": { "name": "easeo", "version": "0.1.0" },
   "site": { "canonical_host": "example.com", "scheme": "https" },
   "defaults": {
     "indexable": true,
