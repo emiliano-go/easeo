@@ -28,7 +28,10 @@ pub fn resolve_references(
         not_equals: expectation.not_equals.as_ref().map(|s| resolve(s)),
         contains: expectation.contains.as_ref().map(|s| resolve(s)),
         matches: expectation.matches.as_ref().map(|s| resolve(s)),
-        one_of: expectation.one_of.as_ref().map(|v| v.iter().map(|s| resolve(s)).collect()),
+        one_of: expectation
+            .one_of
+            .as_ref()
+            .map(|v| v.iter().map(|s| resolve(s)).collect()),
         min_length: expectation.min_length,
         max_length: expectation.max_length,
         min_items: expectation.min_items,
@@ -40,7 +43,25 @@ pub fn resolve_references(
         twitter: expectation.twitter.clone(),
         sitemap: expectation.sitemap.clone(),
         hreflang: expectation.hreflang.clone(),
-        title: expectation.title.as_ref().map(|t| Box::new(resolve_references(t, url, canonical, site_host, entity_slug, route_path))),
-        description: expectation.description.as_ref().map(|d| Box::new(resolve_references(d, url, canonical, site_host, entity_slug, route_path))),
+        title: expectation.title.as_ref().map(|t| {
+            Box::new(resolve_references(
+                t,
+                url,
+                canonical,
+                site_host,
+                entity_slug,
+                route_path,
+            ))
+        }),
+        description: expectation.description.as_ref().map(|d| {
+            Box::new(resolve_references(
+                d,
+                url,
+                canonical,
+                site_host,
+                entity_slug,
+                route_path,
+            ))
+        }),
     }
 }
