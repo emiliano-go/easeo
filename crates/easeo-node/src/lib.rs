@@ -1,7 +1,7 @@
 #![deny(clippy::all)]
 
-use napi_derive::napi;
 use easeo_core as core;
+use napi_derive::napi;
 
 // ── Node wrapper for SEOConfig ────────────────────────────────────────
 
@@ -68,10 +68,15 @@ impl From<&NodeSEOConfig> for core::SEOConfig {
                 follow: c.search_robots_follow.unwrap_or(true),
                 ..Default::default()
             },
-            schema_type_map: c.schema_type_map_json.as_ref().and_then(|json| {
-                serde_json::from_str::<std::collections::HashMap<String, Option<String>>>(json).ok()
-                    .map(|m| m.into_iter().collect())
-            }).unwrap_or_else(|| core::SEOConfig::default().schema_type_map),
+            schema_type_map: c
+                .schema_type_map_json
+                .as_ref()
+                .and_then(|json| {
+                    serde_json::from_str::<std::collections::HashMap<String, Option<String>>>(json)
+                        .ok()
+                        .map(|m| m.into_iter().collect())
+                })
+                .unwrap_or_else(|| core::SEOConfig::default().schema_type_map),
             auto_generate_schema: c.auto_generate_schema.unwrap_or(true),
             publisher_name: c.publisher_name.clone(),
             publisher_logo: c.publisher_logo.clone(),
@@ -126,14 +131,22 @@ pub struct NodeFAQItem {
 impl From<&NodeSEOEntity> for core::SEOEntity {
     fn from(e: &NodeSEOEntity) -> Self {
         let et = core::EntityType::from_str(&e.entity_type).unwrap_or(core::EntityType::Page);
-        let bcs = e.breadcrumbs.as_ref().map(|v| v.iter().map(|b| core::Breadcrumb {
-            name: b.name.clone(),
-            url: b.url.clone(),
-        }).collect());
-        let faq = e.faq_items.as_ref().map(|v| v.iter().map(|f| core::FAQItem {
-            question: f.question.clone(),
-            answer: f.answer.clone(),
-        }).collect());
+        let bcs = e.breadcrumbs.as_ref().map(|v| {
+            v.iter()
+                .map(|b| core::Breadcrumb {
+                    name: b.name.clone(),
+                    url: b.url.clone(),
+                })
+                .collect()
+        });
+        let faq = e.faq_items.as_ref().map(|v| {
+            v.iter()
+                .map(|f| core::FAQItem {
+                    question: f.question.clone(),
+                    answer: f.answer.clone(),
+                })
+                .collect()
+        });
         Self {
             entity_type: et,
             title: e.title.clone(),
@@ -165,6 +178,7 @@ impl From<&NodeSEOEntity> for core::SEOEntity {
 // ── Node output types ─────────────────────────────────────────────────
 
 #[napi(object)]
+#[derive(Clone)]
 pub struct NodeOpenGraph {
     #[napi(js_name = "type")]
     pub og_type: String,
@@ -183,6 +197,7 @@ pub struct NodeOpenGraph {
 }
 
 #[napi(object)]
+#[derive(Clone)]
 pub struct NodeTwitter {
     pub card: String,
     pub title: Option<String>,
@@ -193,7 +208,8 @@ pub struct NodeTwitter {
     pub creator: Option<String>,
 }
 
-#[napi(object)]
+#[napi]
+#[derive(Clone)]
 pub struct NodeSEOPayload {
     pub title: String,
     pub description: String,
@@ -207,9 +223,11 @@ pub struct NodeSEOPayload {
 #[napi]
 impl NodeSEOPayload {
     #[napi]
-    pub fn render_html(&self) -> String {
+    pub fn render_html(&self) -> Result<String, napi::Error> {
         let payload = self.to_core();
-        payload.render_html()
+        payload
+            .render_html()
+            .map_err(|e| napi::Error::from_reason(e.to_string()))
     }
 
     #[napi]
@@ -225,33 +243,39 @@ impl NodeSEOPayload {
     }
 
     #[napi]
-    pub fn render_jsonld(&self) -> String {
+    pub fn render_jsonld(&self) -> Result<String, napi::Error> {
         let payload = self.to_core();
-        payload.render_jsonld()
+        payload
+            .render_jsonld()
+            .map_err(|e| napi::Error::from_reason(e.to_string()))
     }
 
     #[napi(js_name = "toJSON")]
-    pub fn to_json(&self) -> String {
+    pub fn to_json(&self) -> Result<String, napi::Error> {
         let payload = self.to_core();
-        payload.to_json_pretty()
+        payload
+            .to_json_pretty()
+            .map_err(|e| napi::Error::from_reason(e.to_string()))
     }
 
     #[napi]
-    pub fn to_object(&self) -> serde_json::Value {
+    pub fn to_object(&self) -> Result<serde_json::Value, napi::Error> {
         let payload = self.to_core();
-        payload.to_dict()
+        payload
+            .to_dict()
+            .map_err(|e| napi::Error::from_reason(e.to_string()))
     }
 
     #[napi]
-    pub fn hash(&self) -> String {
+    pub fn hash(&self) -> Result<String, napi::Error> {
         let payload = self.to_core();
-        core::hash_payload(&payload)
+        core::hash_payload(&payload).map_err(|e| napi::Error::from_reason(e.to_string()))
     }
 
     #[napi]
-    pub fn etag(&self) -> String {
+    pub fn etag(&self) -> Result<String, napi::Error> {
         let payload = self.to_core();
-        core::etag_payload(&payload)
+        core::etag_payload(&payload).map_err(|e| napi::Error::from_reason(e.to_string()))
     }
 }
 
@@ -303,6 +327,11 @@ pub fn build_seo_payload(
     config: NodeSEOConfig,
 ) -> Result<NodeSEOPayload, napi::Error> {
     let core_config: core::SEOConfig = (&config).into();
+    core_config
+        .validate()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    core::EntityType::from_str(&entity.entity_type)
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
     let core_entity: core::SEOEntity = (&entity).into();
 
     let payload = core::build_seo_payload(&core_entity, &route, &core_config)
@@ -441,11 +470,17 @@ pub fn build_seo_payload_with_overrides(
     overrides: NodeSEOOverrides,
 ) -> Result<NodeSEOPayload, napi::Error> {
     let core_config: core::SEOConfig = (&config).into();
+    core_config
+        .validate()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    core::EntityType::from_str(&entity.entity_type)
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
     let core_entity: core::SEOEntity = (&entity).into();
     let core_overrides: core::SEOOverrides = (&overrides).into();
 
-    let payload = core::build_seo_payload_with_overrides(&core_entity, &route, &core_config, &core_overrides)
-        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let payload =
+        core::build_seo_payload_with_overrides(&core_entity, &route, &core_config, &core_overrides)
+            .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     Ok(NodeSEOPayload {
         title: payload.title,
@@ -514,21 +549,27 @@ pub struct NodeSEOContract {
 #[napi]
 impl NodeSEOContract {
     #[napi]
-    pub fn hash(&self) -> String {
+    pub fn hash(&self) -> Result<String, napi::Error> {
         let contract = self.to_core();
-        contract.hash()
+        contract
+            .hash()
+            .map_err(|e| napi::Error::from_reason(e.to_string()))
     }
 
     #[napi(js_name = "toJSON")]
-    pub fn to_json(&self) -> String {
+    pub fn to_json(&self) -> Result<String, napi::Error> {
         let contract = self.to_core();
-        contract.to_json()
+        contract
+            .to_json()
+            .map_err(|e| napi::Error::from_reason(e.to_string()))
     }
 
     #[napi]
-    pub fn to_dict(&self) -> serde_json::Value {
+    pub fn to_dict(&self) -> Result<serde_json::Value, napi::Error> {
         let contract = self.to_core();
-        contract.to_dict()
+        contract
+            .to_dict()
+            .map_err(|e| napi::Error::from_reason(e.to_string()))
     }
 }
 
@@ -546,7 +587,11 @@ impl NodeSEOContract {
             },
             defaults: self.defaults.to_core(),
             rules: self.rules.iter().map(|r| r.to_core()).collect(),
-            exceptions: self.exceptions.iter().map(|(k, v)| (k.clone(), v.to_core())).collect(),
+            exceptions: self
+                .exceptions
+                .iter()
+                .map(|(k, v)| (k.clone(), v.to_core()))
+                .collect(),
         }
     }
 }
@@ -559,14 +604,20 @@ pub struct NodeContractSite {
 }
 
 #[napi]
-pub fn build_seo_contract(
-    config: NodeSEOContractConfig,
-) -> Result<NodeSEOContract, napi::Error> {
+pub fn build_seo_contract(config: NodeSEOContractConfig) -> Result<NodeSEOContract, napi::Error> {
     let defaults = config.defaults.map(|d| d.to_core()).unwrap_or_default();
-    let rules = config.rules.map(|r| r.iter().map(|r| r.to_core()).collect()).unwrap_or_default();
-    let exceptions = config.exceptions_json.as_ref().and_then(|json| {
-        serde_json::from_str::<std::collections::BTreeMap<String, core::SEOExpectation>>(json).ok()
-    }).unwrap_or_default();
+    let rules = config
+        .rules
+        .map(|r| r.iter().map(|r| r.to_core()).collect())
+        .unwrap_or_default();
+    let exceptions = config
+        .exceptions_json
+        .as_ref()
+        .and_then(|json| {
+            serde_json::from_str::<std::collections::BTreeMap<String, core::SEOExpectation>>(json)
+                .ok()
+        })
+        .unwrap_or_default();
     let cfg = core::SEOContractConfig {
         canonical_host: config.canonical_host,
         scheme: config.scheme.unwrap_or_else(|| "https".to_string()),
@@ -574,8 +625,8 @@ pub fn build_seo_contract(
         rules,
         exceptions,
     };
-    let contract = core::build_seo_contract(&cfg)
-        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    let contract =
+        core::build_seo_contract(&cfg).map_err(|e| napi::Error::from_reason(e.to_string()))?;
     Ok(NodeSEOContract {
         contract_version: contract.contract_version,
         generator_name: contract.generator.name,
@@ -585,8 +636,16 @@ pub fn build_seo_contract(
             scheme: contract.site.scheme,
         },
         defaults: NodeSEOExpectation::from_core(&contract.defaults),
-        rules: contract.rules.iter().map(NodeSEOContractRule::from_core).collect(),
-        exceptions: contract.exceptions.iter().map(|(k, v)| (k.clone(), NodeSEOExpectation::from_core(v))).collect(),
+        rules: contract
+            .rules
+            .iter()
+            .map(NodeSEOContractRule::from_core)
+            .collect(),
+        exceptions: contract
+            .exceptions
+            .iter()
+            .map(|(k, v)| (k.clone(), NodeSEOExpectation::from_core(v)))
+            .collect(),
     })
 }
 
@@ -635,28 +694,38 @@ impl NodeSEOExpectation {
             max_items: self.max_items.map(|v| v as usize),
             indexable: self.indexable,
             canonical: self.canonical.clone(),
-            schema: self.schema_required.map(|required| core::SchemaExpectation {
-                required: Some(required),
-                types: self.schema_types.clone(),
-            }),
+            schema: self
+                .schema_required
+                .map(|required| core::SchemaExpectation {
+                    required: Some(required),
+                    types: self.schema_types.clone(),
+                }),
             open_graph: self.og_required.map(|required| core::FieldExpectation {
                 required: Some(required),
             }),
-            twitter: self.twitter_required.map(|required| core::FieldExpectation {
-                required: Some(required),
-            }),
-            sitemap: self.sitemap_required.map(|required| core::FieldExpectation {
-                required: Some(required),
-            }),
-            hreflang: self.hreflang_required.map(|required| core::FieldExpectation {
-                required: Some(required),
-            }),
+            twitter: self
+                .twitter_required
+                .map(|required| core::FieldExpectation {
+                    required: Some(required),
+                }),
+            sitemap: self
+                .sitemap_required
+                .map(|required| core::FieldExpectation {
+                    required: Some(required),
+                }),
+            hreflang: self
+                .hreflang_required
+                .map(|required| core::FieldExpectation {
+                    required: Some(required),
+                }),
             title: self.title.as_ref().and_then(|v| {
-                serde_json::from_value::<NodeSEOExpectation>(v.clone()).ok()
+                serde_json::from_value::<NodeSEOExpectation>(v.clone())
+                    .ok()
                     .map(|n| Box::new(n.to_core()))
             }),
             description: self.description.as_ref().and_then(|v| {
-                serde_json::from_value::<NodeSEOExpectation>(v.clone()).ok()
+                serde_json::from_value::<NodeSEOExpectation>(v.clone())
+                    .ok()
                     .map(|n| Box::new(n.to_core()))
             }),
         }
@@ -671,10 +740,10 @@ impl NodeSEOExpectation {
             contains: e.contains.clone(),
             matches: e.matches.clone(),
             one_of: e.one_of.clone(),
-            min_length: e.min_length.map(|v| v as u32),
-            max_length: e.max_length.map(|v| v as u32),
-            min_items: e.min_items.map(|v| v as u32),
-            max_items: e.max_items.map(|v| v as u32),
+            min_length: e.min_length.and_then(|v| u32::try_from(v).ok()),
+            max_length: e.max_length.and_then(|v| u32::try_from(v).ok()),
+            min_items: e.min_items.and_then(|v| u32::try_from(v).ok()),
+            max_items: e.max_items.and_then(|v| u32::try_from(v).ok()),
             indexable: e.indexable,
             canonical: e.canonical.clone(),
             schema_required: e.schema.as_ref().and_then(|s| s.required),
@@ -731,11 +800,11 @@ pub struct NodeSEOIssue {
     pub severity: String,
     pub message: String,
     pub url: Option<String>,
-    pub details: String,
+    pub details: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 #[napi]
-pub fn validate_payload(payload: NodeSEOPayload) -> Vec<NodeSEOIssue> {
+pub fn validate_payload(payload: &NodeSEOPayload) -> Vec<NodeSEOIssue> {
     let core_payload = payload.to_core();
     core::validate_payload(&core_payload)
         .iter()
@@ -748,7 +817,7 @@ pub fn validate_payload(payload: NodeSEOPayload) -> Vec<NodeSEOIssue> {
             },
             message: i.message.clone(),
             url: i.url.clone(),
-            details: serde_json::to_string(&i.details).unwrap_or_default(),
+            details: i.details.clone(),
         })
         .collect()
 }
@@ -777,12 +846,14 @@ pub fn normalize_path(
         strip_tracking_params: strip_tracking_params.unwrap_or(true),
         allowed_query_params: allowed_query_params.unwrap_or_default(),
     };
-    core::url::normalize_path(&path, &policy)
-        .map_err(|e| napi::Error::from_reason(e.to_string()))
+    core::url::normalize_path(&path, &policy).map_err(|e| napi::Error::from_reason(e.to_string()))
 }
 
 #[napi]
-pub fn normalize_public_url(url_or_path: String, config: NodeSEOConfig) -> Result<String, napi::Error> {
+pub fn normalize_public_url(
+    url_or_path: String,
+    config: NodeSEOConfig,
+) -> Result<String, napi::Error> {
     let core_config: core::SEOConfig = (&config).into();
     core::url::normalize_public_url(&url_or_path, &core_config)
         .map_err(|e| napi::Error::from_reason(e.to_string()))
@@ -793,8 +864,8 @@ pub fn normalize_public_url(url_or_path: String, config: NodeSEOConfig) -> Resul
 #[napi(object)]
 pub struct NodeCleanResult {
     pub url: String,
-    pub removed_params: String,
-    pub cleaned_params: String,
+    pub removed_params: std::collections::BTreeMap<String, String>,
+    pub cleaned_params: std::collections::BTreeMap<String, String>,
 }
 
 #[napi]
@@ -802,8 +873,8 @@ pub fn clean_url(url: String) -> NodeCleanResult {
     let result = core::detrack::clean_url(&url);
     NodeCleanResult {
         url: result.url,
-        removed_params: serde_json::to_string(&result.removed_params).unwrap_or_default(),
-        cleaned_params: serde_json::to_string(&result.cleaned_params).unwrap_or_default(),
+        removed_params: result.removed_params,
+        cleaned_params: result.cleaned_params,
     }
 }
 
@@ -828,24 +899,29 @@ pub struct NodeSchemaRegistry;
 #[napi]
 impl NodeSchemaRegistry {
     #[napi]
-    pub fn register(&self, schema_type: String) {
-        let mut guard = GLOBAL_REGISTRY.lock().unwrap();
-        let inner = guard.get_or_insert_with(|| NodeSchemaRegistryInner {
-            types: std::collections::BTreeSet::new(),
-        });
-        inner.types.insert(schema_type);
+    pub fn register(&self, schema_type: String) -> Result<(), napi::Error> {
+        Err(napi::Error::from_reason(format!(
+            "custom schema builders are Rust-only and cannot be registered from JavaScript \
+             (attempted to register '{schema_type}'). \
+             Pass custom JSON-LD per page via overrides: \
+             buildSeoPayloadWithOverrides(entity, route, config, {{ schemaJsonLd: {{ ... }} }})."
+        )))
     }
 
     #[napi]
     pub fn has(&self, schema_type: String) -> bool {
-        let guard = GLOBAL_REGISTRY.lock().unwrap();
-        guard.as_ref().is_some_and(|r| r.types.contains(&schema_type))
+        let guard = GLOBAL_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+        guard
+            .as_ref()
+            .is_some_and(|r| r.types.contains(&schema_type))
     }
 
     #[napi]
     pub fn list_types(&self) -> Vec<String> {
-        let guard = GLOBAL_REGISTRY.lock().unwrap();
-        guard.as_ref().map_or_else(Vec::new, |r| r.types.iter().cloned().collect())
+        let guard = GLOBAL_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+        guard
+            .as_ref()
+            .map_or_else(Vec::new, |r| r.types.iter().cloned().collect())
     }
 }
 
