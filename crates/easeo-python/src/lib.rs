@@ -6,6 +6,9 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 use serde_json::Value as JsonValue;
 
+/// Type alias for Python objects (replaces removed PyObject in PyO3 0.29)
+type PyObject = Py<PyAny>;
+
 use easeo_core as core;
 
 // ── Python exception hierarchy ───────────────────────────────────────
@@ -31,7 +34,7 @@ fn convert_core_error(e: core::EaseoError) -> PyErr {
 
 // ── Python wrapper for SEOAuthor ─────────────────────────────────────
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 struct SEOAuthor {
     #[pyo3(get)]
@@ -51,7 +54,7 @@ impl SEOAuthor {
 
 // ── Python wrapper for OGPayload ─────────────────────────────────────
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 struct OGPayload {
     #[pyo3(get)]
@@ -85,20 +88,44 @@ struct OGPayload {
 #[pymethods]
 impl OGPayload {
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
-        let dict = PyDict::new_bound(py);
+        let dict = PyDict::new(py);
         dict.set_item("type", &self.r#type)?;
-        if let Some(ref t) = self.title { dict.set_item("title", t)?; }
-        if let Some(ref d) = self.description { dict.set_item("description", d)?; }
-        if let Some(ref u) = self.url { dict.set_item("url", u)?; }
-        if let Some(ref i) = self.image { dict.set_item("image", i)?; }
-        if let Some(w) = self.image_width { dict.set_item("image_width", w)?; }
-        if let Some(h) = self.image_height { dict.set_item("image_height", h)?; }
-        if let Some(ref a) = self.image_alt { dict.set_item("image_alt", a)?; }
-        if let Some(ref s) = self.site_name { dict.set_item("site_name", s)?; }
-        if let Some(ref l) = self.locale { dict.set_item("locale", l)?; }
-        if let Some(ref locs) = self.locale_alternate { dict.set_item("locale_alternate", locs)?; }
-        if let Some(ref a) = self.audio { dict.set_item("audio", a)?; }
-        if let Some(ref v) = self.video { dict.set_item("video", v)?; }
+        if let Some(ref t) = self.title {
+            dict.set_item("title", t)?;
+        }
+        if let Some(ref d) = self.description {
+            dict.set_item("description", d)?;
+        }
+        if let Some(ref u) = self.url {
+            dict.set_item("url", u)?;
+        }
+        if let Some(ref i) = self.image {
+            dict.set_item("image", i)?;
+        }
+        if let Some(w) = self.image_width {
+            dict.set_item("image_width", w)?;
+        }
+        if let Some(h) = self.image_height {
+            dict.set_item("image_height", h)?;
+        }
+        if let Some(ref a) = self.image_alt {
+            dict.set_item("image_alt", a)?;
+        }
+        if let Some(ref s) = self.site_name {
+            dict.set_item("site_name", s)?;
+        }
+        if let Some(ref l) = self.locale {
+            dict.set_item("locale", l)?;
+        }
+        if let Some(ref locs) = self.locale_alternate {
+            dict.set_item("locale_alternate", locs)?;
+        }
+        if let Some(ref a) = self.audio {
+            dict.set_item("audio", a)?;
+        }
+        if let Some(ref v) = self.video {
+            dict.set_item("video", v)?;
+        }
         Ok(dict)
     }
 }
@@ -125,7 +152,7 @@ impl From<&core::OGPayload> for OGPayload {
 
 // ── Python wrapper for TwitterPayload ────────────────────────────────
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 struct TwitterPayload {
     #[pyo3(get)]
@@ -147,14 +174,26 @@ struct TwitterPayload {
 #[pymethods]
 impl TwitterPayload {
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
-        let dict = PyDict::new_bound(py);
+        let dict = PyDict::new(py);
         dict.set_item("card", &self.card)?;
-        if let Some(ref t) = self.title { dict.set_item("title", t)?; }
-        if let Some(ref d) = self.description { dict.set_item("description", d)?; }
-        if let Some(ref i) = self.image { dict.set_item("image", i)?; }
-        if let Some(ref a) = self.image_alt { dict.set_item("image_alt", a)?; }
-        if let Some(ref s) = self.site { dict.set_item("site", s)?; }
-        if let Some(ref c) = self.creator { dict.set_item("creator", c)?; }
+        if let Some(ref t) = self.title {
+            dict.set_item("title", t)?;
+        }
+        if let Some(ref d) = self.description {
+            dict.set_item("description", d)?;
+        }
+        if let Some(ref i) = self.image {
+            dict.set_item("image", i)?;
+        }
+        if let Some(ref a) = self.image_alt {
+            dict.set_item("image_alt", a)?;
+        }
+        if let Some(ref s) = self.site {
+            dict.set_item("site", s)?;
+        }
+        if let Some(ref c) = self.creator {
+            dict.set_item("creator", c)?;
+        }
         Ok(dict)
     }
 }
@@ -175,7 +214,7 @@ impl From<&core::TwitterPayload> for TwitterPayload {
 
 // ── Python wrapper for SEOExpectation ────────────────────────────────
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 struct SEOExpectation {
     inner: core::SEOExpectation,
@@ -268,7 +307,7 @@ impl SEOExpectation {
 
 // ── Python wrapper for SEOContractRule ────────────────────────────────
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 struct SEOContractRule {
     #[pyo3(get)]
@@ -284,7 +323,11 @@ impl SEOContractRule {
     #[new]
     #[pyo3(signature = (r#match, expect, *, severity=None))]
     fn new(r#match: String, expect: SEOExpectation, severity: Option<String>) -> Self {
-        Self { r#match, expect, severity }
+        Self {
+            r#match,
+            expect,
+            severity,
+        }
     }
 }
 
@@ -292,7 +335,9 @@ impl From<&core::SEOContractRule> for SEOContractRule {
     fn from(rule: &core::SEOContractRule) -> Self {
         Self {
             r#match: rule.r#match.clone(),
-            expect: SEOExpectation { inner: rule.expect.clone() },
+            expect: SEOExpectation {
+                inner: rule.expect.clone(),
+            },
             severity: rule.severity.as_ref().map(|s| match s {
                 core::ContractSeverity::Error => "error".to_string(),
                 core::ContractSeverity::Warning => "warning".to_string(),
@@ -304,7 +349,7 @@ impl From<&core::SEOContractRule> for SEOContractRule {
 
 // ── Python wrapper for SchemaRegistry ────────────────────────────────
 
-#[pyclass]
+#[pyclass(skip_from_py_object)]
 struct SchemaRegistry {
     inner: std::sync::Mutex<core::registry::SchemaRegistry>,
 }
@@ -318,34 +363,33 @@ impl SchemaRegistry {
         }
     }
 
-    /// Register a custom schema type.
-    /// Since Python callables cannot be stored in Rust's SchemaRegistry,
-    /// this records the type name for later use in schema_type_map.
-    fn register(&self, schema_type: &str, _builder: PyObject) {
-        let mut registry = self.inner.lock().unwrap();
-        // We can't store the Python callable, but we can track the type name.
-        // The registry.get() won't find it, but has()/list_types() will report it.
-        // For actual schema generation, the type must be in config.schema_type_map.
-        if !registry.has(schema_type) {
-            // Register a fallback builder that returns an empty object
-            registry.register(schema_type, |_ctx| serde_json::json!({}));
-        }
+    /// Custom schema builders are Rust-only: Python callables cannot be
+    /// stored in the Rust SchemaRegistry, and the registry is never
+    /// consulted by build_seo_payload. Registering here would silently do
+    /// nothing, so this raises instead of becoming a trap. Pass custom
+    /// JSON-LD per page via SEOOverrides(schema_jsonld={...}).
+    fn register(&self, schema_type: &str, _builder: PyObject) -> PyResult<()> {
+        Err(pyo3::exceptions::PyNotImplementedError::new_err(format!(
+            "custom schema builders are Rust-only and cannot be registered from Python \
+             (attempted to register '{schema_type}'). \
+             Pass custom JSON-LD per page via SEOOverrides(schema_jsonld={{...}})."
+        )))
     }
 
     fn has(&self, schema_type: &str) -> bool {
-        let registry = self.inner.lock().unwrap();
+        let registry = self.inner.lock().unwrap_or_else(|e| e.into_inner());
         registry.has(schema_type)
     }
 
     fn list_types(&self) -> Vec<String> {
-        let registry = self.inner.lock().unwrap();
+        let registry = self.inner.lock().unwrap_or_else(|e| e.into_inner());
         registry.list_types()
     }
 }
 
 // ── Python wrapper for SEOImage ───────────────────────────────────────
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 struct SEOImage {
     #[pyo3(get)]
@@ -363,15 +407,26 @@ impl SEOImage {
     #[new]
     #[pyo3(signature = (url, *, width=None, height=None, alt=None))]
     fn new(url: String, width: Option<u32>, height: Option<u32>, alt: Option<String>) -> Self {
-        Self { url, width, height, alt }
+        Self {
+            url,
+            width,
+            height,
+            alt,
+        }
     }
 
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
-        let dict = PyDict::new_bound(py);
+        let dict = PyDict::new(py);
         dict.set_item("url", &self.url)?;
-        if let Some(w) = self.width { dict.set_item("width", w)?; }
-        if let Some(h) = self.height { dict.set_item("height", h)?; }
-        if let Some(ref a) = self.alt { dict.set_item("alt", a)?; }
+        if let Some(w) = self.width {
+            dict.set_item("width", w)?;
+        }
+        if let Some(h) = self.height {
+            dict.set_item("height", h)?;
+        }
+        if let Some(ref a) = self.alt {
+            dict.set_item("alt", a)?;
+        }
         Ok(dict)
     }
 }
@@ -400,7 +455,7 @@ impl From<&SEOImage> for core::SEOImage {
 
 // ── Python wrapper for Breadcrumb ─────────────────────────────────────
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 struct Breadcrumb {
     #[pyo3(get)]
@@ -419,19 +474,25 @@ impl Breadcrumb {
 
 impl From<&core::Breadcrumb> for Breadcrumb {
     fn from(bc: &core::Breadcrumb) -> Self {
-        Self { name: bc.name.clone(), url: bc.url.clone() }
+        Self {
+            name: bc.name.clone(),
+            url: bc.url.clone(),
+        }
     }
 }
 
 impl From<&Breadcrumb> for core::Breadcrumb {
     fn from(bc: &Breadcrumb) -> Self {
-        Self { name: bc.name.clone(), url: bc.url.clone() }
+        Self {
+            name: bc.name.clone(),
+            url: bc.url.clone(),
+        }
     }
 }
 
 // ── Python wrapper for FAQItem ────────────────────────────────────────
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 struct FAQItem {
     #[pyo3(get)]
@@ -450,19 +511,25 @@ impl FAQItem {
 
 impl From<&core::FAQItem> for FAQItem {
     fn from(item: &core::FAQItem) -> Self {
-        Self { question: item.question.clone(), answer: item.answer.clone() }
+        Self {
+            question: item.question.clone(),
+            answer: item.answer.clone(),
+        }
     }
 }
 
 impl From<&FAQItem> for core::FAQItem {
     fn from(item: &FAQItem) -> Self {
-        Self { question: item.question.clone(), answer: item.answer.clone() }
+        Self {
+            question: item.question.clone(),
+            answer: item.answer.clone(),
+        }
     }
 }
 
 // ── Python wrapper for Robots ─────────────────────────────────────────
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 struct Robots {
     #[pyo3(get)]
@@ -488,7 +555,13 @@ impl Robots {
         max_image_preview: Option<String>,
         max_video_preview: Option<i32>,
     ) -> Self {
-        Self { index, follow, max_snippet, max_image_preview, max_video_preview }
+        Self {
+            index,
+            follow,
+            max_snippet,
+            max_image_preview,
+            max_video_preview,
+        }
     }
 
     fn serialize(&self) -> String {
@@ -535,7 +608,7 @@ impl From<&Robots> for core::Robots {
 
 // ── Python wrapper for URLPolicy ──────────────────────────────────────
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 struct URLPolicy {
     #[pyo3(get)]
@@ -600,9 +673,12 @@ impl TryFrom<&URLPolicy> for core::URLPolicy {
             "always" => core::TrailingSlash::Always,
             "never" => core::TrailingSlash::Never,
             "preserve" => core::TrailingSlash::Preserve,
-            _ => return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                format!("invalid trailing_slash: {}", p.trailing_slash)
-            )),
+            _ => {
+                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                    "invalid trailing_slash: {}",
+                    p.trailing_slash
+                )))
+            }
         };
         Ok(Self {
             enforce_https: p.enforce_https,
@@ -617,7 +693,7 @@ impl TryFrom<&URLPolicy> for core::URLPolicy {
 
 // ── Python wrapper for SEOConfig ──────────────────────────────────────
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 struct SEOConfig {
     inner: core::SEOConfig,
@@ -650,11 +726,17 @@ impl SEOConfig {
             None => core::URLPolicy::default(),
         };
         let dr = default_robots.map(|r| (&r).into()).unwrap_or_default();
-        let sr = search_robots.map(|r| (&r).into()).unwrap_or_else(|| core::Robots { index: false, follow: true, ..Default::default() });
+        let sr = search_robots
+            .map(|r| (&r).into())
+            .unwrap_or_else(|| core::Robots {
+                index: false,
+                follow: true,
+                ..Default::default()
+            });
         let doi = default_og_image.map(|i| (&i).into());
-        let sm = schema_type_map.map(|v| {
-            v.into_iter().map(|(k, v)| (k, Some(v))).collect()
-        }).unwrap_or_else(|| core::SEOConfig::default().schema_type_map);
+        let sm = schema_type_map
+            .map(|v| v.into_iter().map(|(k, v)| (k, Some(v))).collect())
+            .unwrap_or_else(|| core::SEOConfig::default().schema_type_map);
 
         let config = core::SEOConfig {
             canonical_host,
@@ -674,21 +756,24 @@ impl SEOConfig {
             twitter_site,
             emit_warnings,
         };
-        config.validate().map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+        config
+            .validate()
+            .map_err(|e| PyErr::new::<ConfigurationError, _>(e.to_string()))?;
         Ok(Self { inner: config })
     }
 
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let json_str = serde_json::to_string(&self.inner)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
-        let json_val: JsonValue = serde_json::from_str(&json_str).unwrap();
+        let json_val: JsonValue = serde_json::from_str(&json_str)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
         json_to_pydict(py, &json_val)
     }
 }
 
 // ── Python wrapper for SEOEntity ──────────────────────────────────────
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 struct SEOEntity {
     inner: core::SEOEntity,
@@ -719,7 +804,7 @@ impl SEOEntity {
         faq_items: Option<Vec<FAQItem>>,
     ) -> PyResult<Self> {
         let et = core::EntityType::from_str(entity_type)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+            .map_err(|e| PyErr::new::<EntityError, _>(e.to_string()))?;
         let fi = featured_image.map(|i| (&i).into());
         let bcs = breadcrumbs.map(|v| v.iter().map(|b| b.into()).collect());
         let faq = faq_items.map(|v| v.iter().map(|f| f.into()).collect());
@@ -766,14 +851,15 @@ impl SEOEntity {
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let json_str = serde_json::to_string(&self.inner)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
-        let json_val: JsonValue = serde_json::from_str(&json_str).unwrap();
+        let json_val: JsonValue = serde_json::from_str(&json_str)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
         json_to_pydict(py, &json_val)
     }
 }
 
 // ── Python wrapper for SEOOverrides ───────────────────────────────────
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone, Default)]
 struct SEOOverrides {
     inner: core::SEOOverrides,
@@ -809,8 +895,10 @@ impl SEOOverrides {
         // Convert Python dict/list to serde_json::Value via json.dumps
         let sj = match schema_jsonld {
             Some(obj) => {
-                let json_module = py.import_bound("json")?;
-                let json_str = json_module.call_method1("dumps", (obj,))?.extract::<String>()?;
+                let json_module = py.import("json")?;
+                let json_str = json_module
+                    .call_method1("dumps", (obj,))?
+                    .extract::<String>()?;
                 Some(serde_json::from_str(&json_str).unwrap_or(serde_json::Value::Null))
             }
             None => None,
@@ -842,7 +930,7 @@ impl SEOOverrides {
 
 // ── Python wrapper for SEOPayload ─────────────────────────────────────
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 struct SEOPayload {
     inner: core::SEOPayload,
@@ -882,13 +970,16 @@ impl SEOPayload {
 
     #[getter]
     fn schema_jsonld<'py>(&self, py: Python<'py>) -> Option<PyObject> {
-        self.inner.schema_jsonld.as_ref().and_then(|v| {
-            json_to_pyobject(py, v).ok().map(|o| o.into())
-        })
+        self.inner
+            .schema_jsonld
+            .as_ref()
+            .and_then(|v| json_to_pyobject(py, v).ok().map(|o| o.into()))
     }
 
-    fn render_html(&self) -> String {
-        self.inner.render_html()
+    fn render_html(&self) -> PyResult<String> {
+        self.inner
+            .render_html()
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))
     }
 
     fn render_opengraph(&self) -> String {
@@ -899,31 +990,40 @@ impl SEOPayload {
         self.inner.render_twitter()
     }
 
-    fn render_jsonld(&self) -> String {
-        self.inner.render_jsonld()
+    fn render_jsonld(&self) -> PyResult<String> {
+        self.inner
+            .render_jsonld()
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))
     }
 
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
-        let json_val = self.inner.to_dict();
+        let json_val = self
+            .inner
+            .to_dict()
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
         json_to_pydict(py, &json_val)
     }
 
-    fn to_json(&self) -> String {
-        self.inner.to_json_pretty()
+    fn to_json(&self) -> PyResult<String> {
+        self.inner
+            .to_json_pretty()
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))
     }
 
-    fn hash(&self) -> String {
+    fn hash(&self) -> PyResult<String> {
         core::hash_payload(&self.inner)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))
     }
 
-    fn etag(&self) -> String {
+    fn etag(&self) -> PyResult<String> {
         core::etag_payload(&self.inner)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))
     }
 }
 
 // ── Python wrapper for SEOContract ────────────────────────────────────
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 struct SEOContract {
     inner: core::SEOContract,
@@ -938,34 +1038,41 @@ impl SEOContract {
 
     #[getter]
     fn site<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
-        let json_val = serde_json::to_value(&self.inner.site).unwrap();
+        let json_val = serde_json::to_value(&self.inner.site)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
         json_to_pydict(py, &json_val)
     }
 
-    fn to_json(&self) -> String {
-        self.inner.to_json()
+    fn to_json(&self) -> PyResult<String> {
+        self.inner
+            .to_json()
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))
     }
 
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let json_str = serde_json::to_string(&self.inner)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
-        let json_val: JsonValue = serde_json::from_str(&json_str).unwrap();
+        let json_val: JsonValue = serde_json::from_str(&json_str)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
         json_to_pydict(py, &json_val)
     }
 
-    fn hash(&self) -> String {
-        self.inner.hash()
+    fn hash(&self) -> PyResult<String> {
+        self.inner
+            .hash()
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))
     }
 
     fn write(&self, path: &str) -> PyResult<()> {
-        self.inner.write(path)
+        self.inner
+            .write(path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))
     }
 }
 
 // ── Python wrapper for SEOContractConfig ──────────────────────────────
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 struct SEOContractConfig {
     inner: core::SEOContractConfig,
@@ -983,19 +1090,25 @@ impl SEOContractConfig {
         exceptions: Option<Vec<(String, SEOExpectation)>>,
     ) -> Self {
         let d = defaults.map(|e| e.inner).unwrap_or_default();
-        let r = rules.map(|v| v.into_iter().map(|r| {
-            core::SEOContractRule {
-                r#match: r.r#match,
-                expect: r.expect.inner,
-                severity: r.severity.as_ref().map(|s| match s.as_str() {
-                    "error" => core::ContractSeverity::Error,
-                    "warning" => core::ContractSeverity::Warning,
-                    "info" => core::ContractSeverity::Info,
-                    _ => core::ContractSeverity::Error,
-                }),
-            }
-        }).collect()).unwrap_or_default();
-        let ex = exceptions.map(|v| v.into_iter().map(|(k, e)| (k, e.inner)).collect()).unwrap_or_default();
+        let r = rules
+            .map(|v| {
+                v.into_iter()
+                    .map(|r| core::SEOContractRule {
+                        r#match: r.r#match,
+                        expect: r.expect.inner,
+                        severity: r.severity.as_ref().map(|s| match s.as_str() {
+                            "error" => core::ContractSeverity::Error,
+                            "warning" => core::ContractSeverity::Warning,
+                            "info" => core::ContractSeverity::Info,
+                            _ => core::ContractSeverity::Error,
+                        }),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        let ex = exceptions
+            .map(|v| v.into_iter().map(|(k, e)| (k, e.inner)).collect())
+            .unwrap_or_default();
         Self {
             inner: core::SEOContractConfig {
                 canonical_host,
@@ -1010,7 +1123,7 @@ impl SEOContractConfig {
 
 // ── Python wrapper for SEOIssue ───────────────────────────────────────
 
-#[pyclass]
+#[pyclass(skip_from_py_object)]
 struct SEOIssue {
     #[pyo3(get)]
     rule_id: String,
@@ -1051,41 +1164,56 @@ impl From<&core::validation::SEOIssue> for SEOIssue {
 
 // ── Helper: JSON → Python ────────────────────────────────────────────
 
+const JSON_MAX_DEPTH: usize = 128;
+
 fn json_to_pydict<'py>(py: Python<'py>, val: &JsonValue) -> PyResult<Bound<'py, PyDict>> {
-    let dict = PyDict::new_bound(py);
+    let dict = PyDict::new(py);
     if let JsonValue::Object(map) = val {
         for (k, v) in map {
-            dict.set_item(k, json_to_pyobject(py, v)?)?;
+            dict.set_item(k, json_to_pyobject_depth(py, v, 0)?)?;
         }
     }
     Ok(dict)
 }
 
 fn json_to_pyobject<'py>(py: Python<'py>, val: &JsonValue) -> PyResult<Bound<'py, PyAny>> {
+    json_to_pyobject_depth(py, val, 0)
+}
+
+fn json_to_pyobject_depth<'py>(
+    py: Python<'py>,
+    val: &JsonValue,
+    depth: usize,
+) -> PyResult<Bound<'py, PyAny>> {
+    if depth > JSON_MAX_DEPTH {
+        return Err(pyo3::exceptions::PyValueError::new_err(
+            "JSON structure too deeply nested (max 128 levels)",
+        ));
+    }
     match val {
         JsonValue::Null => Ok(py.None().into_bound(py)),
-        JsonValue::Bool(b) => Ok(b.into_py(py).into_bound(py)),
+        JsonValue::Bool(b) => Ok(b.into_pyobject(py)?.to_owned().into_any()),
         JsonValue::Number(n) => {
             if let Some(i) = n.as_i64() {
-                Ok(i.into_py(py).into_bound(py))
+                Ok(i.into_pyobject(py)?.to_owned().into_any())
             } else if let Some(f) = n.as_f64() {
-                Ok(f.into_py(py).into_bound(py))
+                Ok(f.into_pyobject(py)?.to_owned().into_any())
             } else {
-                Ok(n.to_string().into_py(py).into_bound(py))
+                Ok(n.to_string().into_pyobject(py)?.to_owned().into_any())
             }
         }
-        JsonValue::String(s) => Ok(s.into_py(py).into_bound(py)),
+        JsonValue::String(s) => Ok(s.into_pyobject(py)?.to_owned().into_any()),
         JsonValue::Array(arr) => {
-            let list = PyList::empty_bound(py);
+            let list = PyList::empty(py);
             for item in arr {
-                list.append(json_to_pyobject(py, item)?)?;
+                list.append(json_to_pyobject_depth(py, item, depth + 1)?)?;
             }
             Ok(list.into_any())
         }
         JsonValue::Object(map) => {
-            let dict = PyDict::new_bound(py);
+            let dict = PyDict::new(py);
             for (k, v) in map {
-                dict.set_item(k, json_to_pyobject(py, v)?)?;
+                dict.set_item(k, json_to_pyobject_depth(py, v, depth + 1)?)?;
             }
             Ok(dict.into_any())
         }
@@ -1116,8 +1244,13 @@ fn build_seo_payload_with_overrides(
     config: &SEOConfig,
     overrides: &SEOOverrides,
 ) -> PyResult<SEOPayload> {
-    let payload = core::build_seo_payload_with_overrides(&entity.inner, route, &config.inner, &overrides.inner)
-        .map_err(convert_core_error)?;
+    let payload = core::build_seo_payload_with_overrides(
+        &entity.inner,
+        route,
+        &config.inner,
+        &overrides.inner,
+    )
+    .map_err(convert_core_error)?;
     Ok(SEOPayload { inner: payload })
 }
 
@@ -1137,13 +1270,16 @@ fn build_seo_payload_dict<'py>(
 #[pyfunction]
 fn build_seo_contract(config: &SEOContractConfig) -> PyResult<SEOContract> {
     let contract = core::build_seo_contract(&config.inner)
-        .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+        .map_err(|e| PyErr::new::<ContractError, _>(e.to_string()))?;
     Ok(SEOContract { inner: contract })
 }
 
 #[pyfunction]
 fn validate_payload(payload: &SEOPayload) -> Vec<SEOIssue> {
-    core::validate_payload(&payload.inner).iter().map(|i| i.into()).collect()
+    core::validate_payload(&payload.inner)
+        .iter()
+        .map(|i| i.into())
+        .collect()
 }
 
 #[pyfunction]
@@ -1162,14 +1298,14 @@ fn normalize_public_url_fn(url: &str, config: &SEOConfig) -> PyResult<String> {
 #[pyfunction]
 fn clean_url_fn<'py>(py: Python<'py>, url: &str) -> PyResult<Bound<'py, PyDict>> {
     let result = core::detrack::clean_url(url);
-    let dict = PyDict::new_bound(py);
+    let dict = PyDict::new(py);
     dict.set_item("url", &result.url)?;
-    let removed = PyDict::new_bound(py);
+    let removed = PyDict::new(py);
     for (k, v) in &result.removed_params {
         removed.set_item(k.as_str(), v.as_str())?;
     }
     dict.set_item("removed_params", removed)?;
-    let cleaned = PyDict::new_bound(py);
+    let cleaned = PyDict::new(py);
     for (k, v) in &result.cleaned_params {
         cleaned.set_item(k.as_str(), v.as_str())?;
     }
@@ -1187,12 +1323,15 @@ fn clean_query_fn(query: &str) -> String {
 #[pymodule]
 fn _easeo_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Exceptions
-    m.add("EaseoError", m.py().get_type_bound::<EaseoError>())?;
-    m.add("InvalidUrlError", m.py().get_type_bound::<InvalidUrlError>())?;
-    m.add("ConfigurationError", m.py().get_type_bound::<ConfigurationError>())?;
-    m.add("EntityError", m.py().get_type_bound::<EntityError>())?;
-    m.add("SchemaError", m.py().get_type_bound::<SchemaError>())?;
-    m.add("ContractError", m.py().get_type_bound::<ContractError>())?;
+    m.add("EaseoError", m.py().get_type::<EaseoError>())?;
+    m.add("InvalidUrlError", m.py().get_type::<InvalidUrlError>())?;
+    m.add(
+        "ConfigurationError",
+        m.py().get_type::<ConfigurationError>(),
+    )?;
+    m.add("EntityError", m.py().get_type::<EntityError>())?;
+    m.add("SchemaError", m.py().get_type::<SchemaError>())?;
+    m.add("ContractError", m.py().get_type::<ContractError>())?;
 
     // Types
     m.add_class::<SEOImage>()?;
