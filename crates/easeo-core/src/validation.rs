@@ -1,6 +1,6 @@
+use crate::payload::SEOPayload;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use crate::payload::SEOPayload;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Severity {
@@ -37,7 +37,10 @@ pub fn validate(payload: &SEOPayload) -> Vec<SEOIssue> {
         issues.push(SEOIssue {
             rule_id: "EASEO102".to_string(),
             severity: Severity::Warning,
-            message: format!("Title is {} characters (recommended max 60)", payload.title.len()),
+            message: format!(
+                "Title is {} characters (recommended max 60)",
+                payload.title.len()
+            ),
             url: Some(payload.canonical.clone()),
             details: {
                 let mut d = BTreeMap::new();
@@ -59,11 +62,17 @@ pub fn validate(payload: &SEOPayload) -> Vec<SEOIssue> {
         issues.push(SEOIssue {
             rule_id: "EASEO104".to_string(),
             severity: Severity::Warning,
-            message: format!("Meta description is {} characters (recommended max 160)", payload.description.len()),
+            message: format!(
+                "Meta description is {} characters (recommended max 160)",
+                payload.description.len()
+            ),
             url: Some(payload.canonical.clone()),
             details: {
                 let mut d = BTreeMap::new();
-                d.insert("length".to_string(), serde_json::json!(payload.description.len()));
+                d.insert(
+                    "length".to_string(),
+                    serde_json::json!(payload.description.len()),
+                );
                 d
             },
         });
@@ -100,12 +109,23 @@ pub fn validate(payload: &SEOPayload) -> Vec<SEOIssue> {
     let robots = &payload.robots;
     let valid_parts: Vec<&str> = robots.split(',').map(|s| s.trim()).collect();
     let valid_directives = [
-        "index", "noindex", "follow", "nofollow",
-        "none", "noarchive", "nosnippet", "notranslate", "unavailable_after",
+        "index",
+        "noindex",
+        "follow",
+        "nofollow",
+        "none",
+        "noarchive",
+        "nosnippet",
+        "notranslate",
+        "unavailable_after",
     ];
     for part in &valid_parts {
         let key = part.split(':').next().unwrap_or(part);
-        if !valid_directives.contains(&key) && !key.starts_with("max-snippet") && !key.starts_with("max-image-preview") && !key.starts_with("max-video-preview") {
+        if !valid_directives.contains(&key)
+            && !key.starts_with("max-snippet")
+            && !key.starts_with("max-image-preview")
+            && !key.starts_with("max-video-preview")
+        {
             issues.push(SEOIssue {
                 rule_id: "EASEO107".to_string(),
                 severity: Severity::Warning,
