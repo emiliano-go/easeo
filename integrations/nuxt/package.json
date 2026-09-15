@@ -4,8 +4,19 @@
   "description": "easeo integration for Nuxt",
   "main": "index.js",
   "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    }
+  },
+  "files": [
+    "index.js",
+    "index.d.ts"
+  ],
   "license": "MIT",
   "peerDependencies": {
-    "@easeo/core": "^0.1.0"
+    "@easeo/core": "^0.1.0",
+    "nuxt": ">=3.0.0"
   }
 }
