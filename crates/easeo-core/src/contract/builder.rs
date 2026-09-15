@@ -1,5 +1,5 @@
+use super::model::{ContractGenerator, ContractSite, SEOContract, SEOContractConfig};
 use crate::error::EaseoError;
-use super::model::{SEOContract, SEOContractConfig, ContractGenerator, ContractSite};
 
 pub fn build_contract(config: &SEOContractConfig) -> Result<SEOContract, EaseoError> {
     Ok(SEOContract {
