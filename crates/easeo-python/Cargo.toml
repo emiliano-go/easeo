@@ -11,5 +11,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 easeo-core.workspace = true
-pyo3 = { version = "0.22", features = ["extension-module"] }
+pyo3 = { version = "0.29", features = ["extension-module"] }
 serde_json.workspace = true
