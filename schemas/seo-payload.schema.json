@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/emiliano-go/easeo/schemas/seo-payload.schema.json",
+  "title": "easeo SEOPayload",
+  "description": "Schema for easeo SEO payload output",
+  "type": "object",
+  "required": ["title", "canonical", "robots", "og", "twitter"],
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Page title"
+    },
+    "description": {
+      "type": "string",
+      "description": "Meta description"
+    },
+    "canonical": {
+      "type": "string",
+      "format": "uri",
+      "description": "Canonical URL"
+    },
+    "robots": {
+      "type": "string",
+      "description": "Robots directive (e.g. 'index,follow')"
+    },
+    "og": {
+      "$ref": "#/$defs/openGraph"
+    },
+    "twitter": {
+      "$ref": "#/$defs/twitter"
+    },
+    "schema_jsonld": {
+      "description": "JSON-LD structured data"
+    }
+  },
+  "$defs": {
+    "openGraph": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "url": { "type": "string", "format": "uri" },
+        "image": { "type": "string", "format": "uri" },
+        "image_width": { "type": "integer" },
+        "image_height": { "type": "integer" },
+        "image_alt": { "type": "string" },
+        "site_name": { "type": "string" },
+        "locale": { "type": "string" },
+        "locale_alternate": { "type": "array", "items": { "type": "string" } },
+        "audio": { "type": "string" },
+        "video": { "type": "string" }
+      }
+    },
+    "twitter": {
+      "type": "object",
+      "required": ["card"],
+      "properties": {
+        "card": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "image": { "type": "string", "format": "uri" },
+        "image_alt": { "type": "string" },
+        "site": { "type": "string" },
+        "creator": { "type": "string" }
+      }
+    }
+  }
+}

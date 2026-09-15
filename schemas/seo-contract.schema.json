@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/emiliano-go/easeo/schemas/seo-contract.schema.json",
+  "title": "easeo SEOContract",
+  "description": "Schema for easeo SEO contract output",
+  "type": "object",
+  "required": ["contract_version", "generator", "site"],
+  "properties": {
+    "contract_version": {
+      "type": "string",
+      "const": "1"
+    },
+    "generator": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" }
+      }
+    },
+    "site": {
+      "type": "object",
+      "required": ["canonical_host", "scheme"],
+      "properties": {
+        "canonical_host": { "type": "string" },
+        "scheme": { "type": "string", "enum": ["http", "https"] }
+      }
+    },
+    "defaults": {
+      "$ref": "#/$defs/expectation"
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/rule"
+      }
+    },
+    "exceptions": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/expectation"
+      }
+    }
+  },
+  "$defs": {
+    "expectation": {
+      "type": "object",
+      "properties": {
+        "required": { "type": "boolean" },
+        "forbidden": { "type": "boolean" },
+        "equals": { "type": "string" },
+        "not_equals": { "type": "string" },
+        "contains": { "type": "string" },
+        "matches": { "type": "string" },
+        "one_of": { "type": "array", "items": { "type": "string" } },
+        "min_length": { "type": "integer" },
+        "max_length": { "type": "integer" },
+        "min_items": { "type": "integer" },
+        "max_items": { "type": "integer" },
+        "indexable": { "type": "boolean" },
+        "canonical": { "type": "string" },
+        "schema": { "$ref": "#/$defs/schemaExpectation" },
+        "open_graph": { "$ref": "#/$defs/fieldExpectation" },
+        "twitter": { "$ref": "#/$defs/fieldExpectation" },
+        "sitemap": { "$ref": "#/$defs/fieldExpectation" },
+        "hreflang": { "$ref": "#/$defs/fieldExpectation" }
+      }
+    },
+    "schemaExpectation": {
+      "type": "object",
+      "properties": {
+        "required": { "type": "boolean" },
+        "types": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "fieldExpectation": {
+      "type": "object",
+      "properties": {
+        "required": { "type": "boolean" }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "required": ["match", "expect"],
+      "properties": {
+        "match": { "type": "string" },
+        "expect": { "$ref": "#/$defs/expectation" },
+        "severity": { "type": "string", "enum": ["error", "warning", "info"] }
+      }
+    }
+  }
+}

@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/emiliano-go/easeo/schemas/seo-config.schema.json",
+  "title": "easeo SEOConfig",
+  "description": "Schema for easeo SEO configuration",
+  "type": "object",
+  "required": ["canonical_host", "public_base_url"],
+  "properties": {
+    "canonical_host": {
+      "type": "string",
+      "description": "Canonical hostname (no scheme, no path)"
+    },
+    "public_base_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Full public URL of the deployment"
+    },
+    "url_policy": {
+      "$ref": "#/$defs/urlPolicy"
+    },
+    "site_name": {
+      "type": "string"
+    },
+    "title_template": {
+      "type": "string",
+      "description": "Title template with {title} placeholder"
+    },
+    "default_robots": {
+      "$ref": "#/$defs/robots"
+    },
+    "search_robots": {
+      "$ref": "#/$defs/robots"
+    },
+    "auto_generate_schema": {
+      "type": "boolean",
+      "default": true
+    },
+    "publisher_name": {
+      "type": "string"
+    },
+    "publisher_logo": {
+      "type": "string",
+      "format": "uri"
+    },
+    "locale": {
+      "type": "string"
+    },
+    "locale_alternate": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "twitter_site": {
+      "type": "string"
+    },
+    "default_og_image": {
+      "$ref": "#/$defs/seoImage"
+    },
+    "schema_type_map": {
+      "type": "object",
+      "additionalProperties": {
+        "type": ["string", "null"]
+      },
+      "description": "Map of entity types to schema.org types"
+    },
+    "emit_warnings": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "$defs": {
+    "urlPolicy": {
+      "type": "object",
+      "properties": {
+        "enforce_https": { "type": "boolean", "default": true },
+        "lowercase_paths": { "type": "boolean", "default": true },
+        "trailing_slash": { "type": "string", "enum": ["always", "never", "preserve"], "default": "never" },
+        "collapse_duplicate_slashes": { "type": "boolean", "default": true },
+        "strip_tracking_params": { "type": "boolean", "default": true },
+        "allowed_query_params": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "robots": {
+      "type": "object",
+      "properties": {
+        "index": { "type": "boolean", "default": true },
+        "follow": { "type": "boolean", "default": true },
+        "max_snippet": { "type": "integer" },
+        "max_image_preview": { "type": "string" },
+        "max_video_preview": { "type": "integer" }
+      }
+    },
+    "seoImage": {
+      "type": "object",
+      "properties": {
+        "url": { "type": "string", "format": "uri" },
+        "width": { "type": "integer" },
+        "height": { "type": "integer" },
+        "alt": { "type": "string" }
+      },
+      "required": ["url"]
+    }
+  }
+}
