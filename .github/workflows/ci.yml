@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
-    branches: [main]
+    branches: [master]
 
 env:
   CARGO_TERM_COLOR: always
@@ -46,7 +46,7 @@ jobs:
       - name: Install maturin
         run: pip install maturin
       - name: Build Python package
-        run: maturin develop --release
+        run: maturin develop --release -m crates/easeo-python/Cargo.toml
       - name: Run Python tests
         run: python -m pytest tests/python/ -v
 
@@ -68,9 +68,9 @@ jobs:
       - name: Install napi CLI
         run: npm install -g @napi-rs/cli
       - name: Build native module
-        run: napi build --release
+        run: cd packages/core && napi build --release --manifest-path ../../crates/easeo-node/Cargo.toml && cp ../../crates/easeo-node/*.node .
       - name: Run Node tests
-        run: node --test tests/javascript/*.js
+        run: node --test tests/javascript/*.cjs
 
   conformance:
     name: Cross-Language Conformance
@@ -89,8 +89,8 @@ jobs:
         run: pip install maturin && npm install -g @napi-rs/cli
       - name: Build all packages
         run: |
-          maturin develop --release
-          napi build --release
+          maturin develop --release -m crates/easeo-python/Cargo.toml
+          cd packages/core && napi build --release --manifest-path ../../crates/easeo-node/Cargo.toml && cp ../../crates/easeo-node/*.node .
       - name: Run conformance test
         run: python tests/conformance/test_conformance.py
 
