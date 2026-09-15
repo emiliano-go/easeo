@@ -18,7 +18,7 @@ def load_fixture(name: str) -> dict:
 
 
 def hash_payload(payload: dict) -> str:
-    return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
 def get_python_payload_hash(fixture_name: str, route: str) -> str | None:
