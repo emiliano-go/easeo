@@ -1,26 +1,31 @@
-pub mod config;
-pub mod entity;
-pub mod payload;
-pub mod url;
-pub mod canonical;
-pub mod opengraph;
-pub mod twitter;
-pub mod robots;
 pub mod breadcrumbs;
-pub mod jsonld;
+pub mod canonical;
+pub mod config;
 pub mod contract;
-pub mod validation;
-pub mod hashing;
 pub mod detrack;
-pub mod text;
+pub mod entity;
 pub mod error;
+pub mod hashing;
+pub mod jsonld;
+pub mod opengraph;
+pub mod payload;
+pub mod robots;
+pub mod text;
+pub mod twitter;
+pub mod url;
+pub mod validation;
 
-pub use config::{SEOConfig, URLPolicy, TrailingSlash};
-pub use entity::{SEOEntity, EntityType, SEOAuthor, SEOImage, Breadcrumb, FAQItem, Robots, SEOOverrides};
-pub use payload::{SEOPayload, OGPayload, TwitterPayload};
-pub use contract::{SEOContract, SEOContractConfig, SEOContractRule, SEOExpectation, ContractSeverity, SchemaExpectation, FieldExpectation, ContractGenerator, ContractSite};
-pub use jsonld::registry;
+pub use config::{SEOConfig, TrailingSlash, URLPolicy};
+pub use contract::{
+    ContractGenerator, ContractSeverity, ContractSite, FieldExpectation, SEOContract,
+    SEOContractConfig, SEOContractRule, SEOExpectation, SchemaExpectation,
+};
+pub use entity::{
+    Breadcrumb, EntityType, FAQItem, Robots, SEOAuthor, SEOEntity, SEOImage, SEOOverrides,
+};
 pub use error::EaseoError;
+pub use jsonld::registry;
+pub use payload::{OGPayload, SEOPayload, TwitterPayload};
 
 use entity as entity_mod;
 
@@ -51,16 +56,16 @@ pub fn validate_payload(payload: &SEOPayload) -> Vec<validation::SEOIssue> {
     validation::validate(payload)
 }
 
-pub fn hash_payload(payload: &SEOPayload) -> String {
+pub fn hash_payload(payload: &SEOPayload) -> Result<String, error::EaseoError> {
     hashing::hash_payload(payload)
 }
 
-pub fn etag_payload(payload: &SEOPayload) -> String {
+pub fn etag_payload(payload: &SEOPayload) -> Result<String, error::EaseoError> {
     hashing::etag_payload(payload)
 }
 
+pub use detrack::{clean_query, clean_url, CleanResult};
 pub use url::{normalize_path, normalize_public_url};
-pub use detrack::{clean_url, clean_query, CleanResult};
 
 #[cfg(test)]
 mod tests {
@@ -111,7 +116,10 @@ mod tests {
 
         let payload1 = build_seo_payload(&entity, "/test", &config).unwrap();
         let payload2 = build_seo_payload(&entity, "/test", &config).unwrap();
-        assert_eq!(hash_payload(&payload1), hash_payload(&payload2));
+        assert_eq!(
+            hash_payload(&payload1).unwrap(),
+            hash_payload(&payload2).unwrap()
+        );
     }
 
     #[test]
@@ -154,7 +162,8 @@ mod tests {
 
     #[test]
     fn test_detrack() {
-        let result = detrack::clean_url("https://example.com/page?utm_source=twitter&q=hello&fbclid=123");
+        let result =
+            detrack::clean_url("https://example.com/page?utm_source=twitter&q=hello&fbclid=123");
         assert_eq!(result.url, "https://example.com/page?q=hello");
         assert!(result.removed_params.contains_key("utm_source"));
         assert!(result.removed_params.contains_key("fbclid"));
@@ -162,7 +171,11 @@ mod tests {
 
     #[test]
     fn test_robots_serialization() {
-        let robots = Robots { index: true, follow: false, ..Default::default() };
+        let robots = Robots {
+            index: true,
+            follow: false,
+            ..Default::default()
+        };
         assert_eq!(robots.serialize(), "index,nofollow");
     }
 
@@ -181,7 +194,7 @@ mod tests {
         };
 
         let payload = build_seo_payload(&entity, "/test", &config).unwrap();
-        let html = payload.render_html();
+        let html = payload.render_html().unwrap();
         assert!(html.contains("<title>Test</title>"));
         assert!(html.contains("og:title"));
     }
@@ -203,8 +216,57 @@ mod tests {
         };
 
         let payload = build_seo_payload(&entity, "/blog/test-article", &config).unwrap();
-        let json = serde_json::to_string(&payload.to_dict()).unwrap();
+        let json = serde_json::to_string(&payload.to_dict().unwrap()).unwrap();
         let hash = format!("{:x}", sha2::Sha256::digest(json.as_bytes()));
         println!("CONFORMANCE_HASH:{}", hash);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Text module tests
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_html_to_text_strips_script() {
+        let result = crate::text::html_to_text("<p>Hello</p><script>alert(1)</script><p>World</p>");
+        assert!(result.contains("Hello"));
+        assert!(result.contains("World"));
+        assert!(!result.contains("alert"));
+    }
+
+    #[test]
+    fn test_html_to_text_strips_style() {
+        let result =
+            crate::text::html_to_text("<p>Hello</p><style>.red{color:red}</style><p>World</p>");
+        assert!(result.contains("Hello"));
+        assert!(result.contains("World"));
+        assert!(!result.contains("color"));
+    }
+
+    #[test]
+    fn test_html_to_text_strips_noscript() {
+        let result =
+            crate::text::html_to_text("<p>Hello</p><noscript>JS disabled</noscript><p>World</p>");
+        assert!(result.contains("Hello"));
+        assert!(result.contains("World"));
+        assert!(!result.contains("JS disabled"));
+    }
+
+    #[test]
+    fn test_html_to_text_collapses_whitespace() {
+        let result = crate::text::html_to_text("Hello   \t\n  World");
+        assert_eq!(result, "Hello World");
+    }
+
+    #[test]
+    fn test_description_snippet_none_input() {
+        assert_eq!(crate::text::build_description_snippet(None, 160), None);
+    }
+
+    #[test]
+    fn test_description_snippet_truncation() {
+        let text = "A".repeat(200);
+        let result = crate::text::build_description_snippet(Some(&text), 160).unwrap();
+        assert!(result.ends_with("..."));
+        assert!(result.len() <= 163);
     }
 }
