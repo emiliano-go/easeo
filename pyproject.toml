@@ -27,6 +27,19 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
+[project.optional-dependencies]
+fastapi = ["fastapi>=0.100"]
+django = ["django>=4.0"]
+flask = ["flask>=2.3"]
+zensical = ["zensical", "markdown>=3.5"]
+all = [
+    "fastapi>=0.100",
+    "django>=4.0",
+    "flask>=2.3",
+    "zensical",
+    "markdown>=3.5",
+]
+
 [project.urls]
 Homepage = "https://github.com/emiliano-go/easeo"
 Documentation = "https://github.com/emiliano-go/easeo#readme"
