@@ -12,16 +12,17 @@ class EaseoSEO:
     """FastAPI SEO helper."""
 
     def __init__(self, config: SEOConfig) -> None:
+        if config is None:
+            raise ValueError(
+                "SEOConfig is required. Pass a valid SEOConfig instance."
+            )
         self.config = config
 
     def for_entity(self, entity: Any, route: str) -> dict:
         """Build SEO payload for a given entity and route."""
-        from easeo import SEOEntity, build_seo_payload
+        from easeo import build_seo_payload
+        from easeo.adapters._common import build_entity
 
-        seo_entity = SEOEntity(
-            entity_type=getattr(entity, "entity_type", "page"),
-            title=getattr(entity, "title", None),
-            excerpt=getattr(entity, "excerpt", None) or getattr(entity, "description", None),
-        )
+        seo_entity = build_entity(entity)
         payload = build_seo_payload(seo_entity, route, self.config)
         return payload.to_dict()
