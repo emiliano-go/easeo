@@ -202,7 +202,7 @@ export interface SEOIssue {
   severity: string;
   message: string;
   url?: string;
-  details: string;
+  details: Record<string, unknown>;
 }
 
 export declare function buildSeoPayload(
@@ -245,8 +245,8 @@ export declare function normalizePublicUrl(
 
 export declare function cleanUrl(url: string): {
   url: string;
-  removedParams: string;
-  cleanedParams: string;
+  removedParams: Record<string, string>;
+  cleanedParams: Record<string, string>;
 };
 
 export declare function cleanQuery(query: string): string;
