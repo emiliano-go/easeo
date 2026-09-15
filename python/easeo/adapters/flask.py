@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from markupsafe import Markup
+
 
 class Easeo:
     """Flask SEO helper.
@@ -36,25 +38,26 @@ class Easeo:
 
         @app.context_processor
         def easeo_context():
-            def seo_head(entity: Any, route: str) -> str:
-                from easeo import SEOEntity, build_seo_payload
-                seo_entity = SEOEntity(
-                    entity_type=getattr(entity, "entity_type", "page"),
-                    title=getattr(entity, "title", None),
-                    excerpt=getattr(entity, "excerpt", None) or getattr(entity, "description", None),
-                )
+            def seo_head(entity: Any, route: str) -> Markup:
+                from easeo import build_seo_payload
+                from easeo.adapters._common import build_entity
+
+                seo_entity = build_entity(entity)
                 payload = build_seo_payload(seo_entity, route, self.config)
-                return payload.render_html()
+                return Markup(payload.render_html())
+
             return dict(easeo_head=seo_head)
 
     def for_entity(self, entity: Any, route: str) -> dict:
         """Build SEO payload for a given entity and route."""
-        from easeo import SEOEntity, build_seo_payload
+        from easeo import build_seo_payload
+        from easeo.adapters._common import build_entity
 
-        seo_entity = SEOEntity(
-            entity_type=getattr(entity, "entity_type", "page"),
-            title=getattr(entity, "title", None),
-            excerpt=getattr(entity, "excerpt", None) or getattr(entity, "description", None),
-        )
+        if self.config is None:
+            raise ValueError(
+                "Easeo config not initialized. "
+                "Call Easeo(app, config) or easeo.init_app(app) first."
+            )
+        seo_entity = build_entity(entity)
         payload = build_seo_payload(seo_entity, route, self.config)
         return payload.to_dict()
