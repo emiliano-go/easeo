@@ -1,5 +1,5 @@
-use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 use crate::entity::{Robots, SEOImage};
 use crate::error::EaseoError;
@@ -126,7 +126,10 @@ fn default_schema_type_map() -> BTreeMap<String, Option<String>> {
     map.insert("search".to_string(), Some("SearchResultsPage".to_string()));
     map.insert("product".to_string(), Some("Product".to_string()));
     map.insert("organization".to_string(), Some("Organization".to_string()));
-    map.insert("local_business".to_string(), Some("LocalBusiness".to_string()));
+    map.insert(
+        "local_business".to_string(),
+        Some("LocalBusiness".to_string()),
+    );
     map.insert("faq".to_string(), Some("FAQPage".to_string()));
     map
 }
@@ -173,7 +176,11 @@ impl Default for SEOConfig {
             default_og_image: None,
             site_name: None,
             title_template: Some("{title}".to_string()),
-            search_robots: Robots { index: false, follow: true, ..Default::default() },
+            search_robots: Robots {
+                index: false,
+                follow: true,
+                ..Default::default()
+            },
             schema_type_map: default_schema_type_map(),
             auto_generate_schema: true,
             publisher_name: None,
