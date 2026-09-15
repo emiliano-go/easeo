@@ -8,11 +8,11 @@ easeo is the Rust rewrite of seoslug. The core API is similar but the implementa
 
 | seoslug | easeo |
 |---------|-------|
-| `seoslug.SESEOConfig` | `easeo.SEOConfig` |
-| `seoslug.SESEntity` | `easeo.SEOEntity` |
+| `seoslug.SEOConfig` | `easeo.SEOConfig` |
+| `seoslug.SEOEntity` | `easeo.SEOEntity` |
 | `seoslug.build_seo_payload()` | `easeo.build_seo_payload()` |
 | `seoslug.URLPolicy` | `easeo.URLPolicy` |
-| `seoslug.SchemaRegistry` | Not yet exposed in Python |
+| `seoslug.SchemaRegistry` | Rust-only in easeo; use `SEOOverrides(schema_jsonld={...})` from Python |
 | `seoslug.hook` | Removed (hooks conflict with determinism) |
 | `seoslug.factories` | May be added later |
 
