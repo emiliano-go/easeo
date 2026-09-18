@@ -4,6 +4,7 @@
 const { buildSeoContract } = require("@easeo/core");
 const { writeFileSync, mkdirSync, existsSync } = require("fs");
 const { join } = require("path");
+const { fileURLToPath } = require("url");
 
 /**
  * @typedef {Object} EaseoAstroConfig
@@ -37,13 +38,18 @@ function easeo(options) {
     hooks: {
       "astro:build:done"({ dir }) {
         if (!contractConfig) return;
-        const outDir = dir.pathname;
+        const outDir = fileURLToPath(dir);
         const contract = buildSeoContract(contractConfig);
         const contractDir = join(outDir, ".easeo");
         if (!existsSync(contractDir)) {
           mkdirSync(contractDir, { recursive: true });
         }
-        writeFileSync(join(contractDir, "contract.json"), contract.toJSON());
+        // Emit the canonical snake_case wire format so the artifact matches
+        // the published seo-contract JSON schema.
+        writeFileSync(
+          join(contractDir, "contract.json"),
+          JSON.stringify(contract.toDict(), null, 2)
+        );
       },
       "astro:config:setup"({ updateConfig }) {
         updateConfig({
