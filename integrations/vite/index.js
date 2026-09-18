@@ -33,8 +33,10 @@ function easeo(options) {
     name: "@easeo/vite",
 
     transformIndexHtml(html, ctx) {
-      // Build a default entity from the page path
-      const route = ctx.path.replace(/\.html$/, "").replace(/index$/, "") || "/";
+      // Build a default entity from the page path. Only strip a trailing
+      // "index" when it is its own segment (e.g. /blog/index.html), so
+      // routes like /reindex are left intact.
+      const route = ctx.path.replace(/\.html$/, "").replace(/(^|\/)index$/, "") || "/";
       const entity = {
         entityType: "page",
         title: config.siteName ?? "Page",
@@ -77,12 +79,12 @@ function easeo(options) {
         tags.push({ tag: "meta", attrs: { name: "twitter:description", content: payload.twitter.description } });
       }
 
-      // JSON-LD
+      // JSON-LD. Escape "<" so a closing script tag in the data cannot break out.
       if (payload.schemaJsonLd) {
         tags.push({
           tag: "script",
           attrs: { type: "application/ld+json" },
-          children: JSON.stringify(payload.schemaJsonLd),
+          children: JSON.stringify(payload.schemaJsonLd).replace(/</g, "\\u003c"),
         });
       }
 
