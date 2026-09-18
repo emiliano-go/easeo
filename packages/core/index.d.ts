@@ -22,6 +22,10 @@ export interface SEOConfig {
   searchRobotsIndex?: boolean;
   searchRobotsFollow?: boolean;
   schemaTypeMapJson?: string;
+  /** Config-scoped hooks, run after the payload is built. */
+  hooks?: HookRegistry;
+  /** Config-scoped custom JSON-LD generators. */
+  schemaRegistry?: SchemaRegistry;
 }
 
 export interface SEOImage {
@@ -126,6 +130,17 @@ export interface TwitterPayload {
   creator?: string;
 }
 
+/** Canonical snake_case wire format, shared with the Python/Rust APIs. */
+export interface PayloadDict {
+  title: string;
+  description: string;
+  canonical: string;
+  robots: string;
+  og: OpenGraphPayload;
+  twitter: TwitterPayload;
+  schema_jsonld?: object | object[];
+}
+
 export interface SEOPayload {
   title: string;
   description: string;
@@ -138,10 +153,54 @@ export interface SEOPayload {
   renderOpengraph(): string;
   renderTwitter(): string;
   renderJsonld(): string;
-  toObject(): object;
-  toJSON(): string;
+  /** Plain camelCase object. `JSON.stringify(payload)` serializes this. */
+  toObject(): SEOPayloadData;
+  /** Alias of {@link toObject}; enables correct `JSON.stringify` behavior. */
+  toJSON(): SEOPayloadData;
+  /** Canonical snake_case object (matches the published JSON schema). */
+  toDict(): PayloadDict;
+  /** Canonical pretty-printed JSON string (matches Python `to_json`). */
+  toJSONString(): string;
+  /** Canonical pretty-printed JSON string. */
+  toString(): string;
+  /** Look up a field with a default, dict-style. */
+  get(key: string, fallback?: unknown): unknown;
+  /** Whether a field is present, dict-style. */
+  has(key: string): boolean;
+  /** Deep equality against another payload or a plain object. */
+  equals(other: SEOPayload | SEOPayloadData | Record<string, unknown>): boolean;
   hash(): string;
   etag(): string;
+}
+
+/** The enumerable, camelCase data carried by a {@link SEOPayload}. */
+export interface SEOPayloadData {
+  title: string;
+  description: string;
+  canonical: string;
+  robots: string;
+  openGraph: OpenGraphPayload;
+  twitter: TwitterPayload;
+  schemaJsonLd?: object | object[];
+}
+
+/** Canonical snake_case wire format for a contract. */
+export interface ContractDict {
+  contract_version: string;
+  generator: { name: string; version: string };
+  site: { canonical_host: string; scheme: string };
+  defaults: SEOExpectation;
+  rules: SEOContractRule[];
+  exceptions: Record<string, SEOExpectation>;
+}
+
+export interface SEOContractData {
+  contractVersion: string;
+  generator: { name: string; version: string };
+  site: { canonicalHost: string; scheme: string };
+  defaults: SEOExpectation;
+  rules: SEOContractRule[];
+  exceptions: Record<string, SEOExpectation>;
 }
 
 export interface SEOContract {
@@ -153,8 +212,16 @@ export interface SEOContract {
   rules: SEOContractRule[];
   exceptions: Record<string, SEOExpectation>;
   hash(): string;
-  toJSON(): string;
-  toDict(): object;
+  /** Plain camelCase object. `JSON.stringify(contract)` serializes this. */
+  toObject(): SEOContractData;
+  /** Alias of {@link toObject}; enables correct `JSON.stringify` behavior. */
+  toJSON(): SEOContractData;
+  /** Canonical snake_case object. */
+  toDict(): ContractDict;
+  /** Canonical JSON string. */
+  toJSONString(): string;
+  /** Canonical JSON string. */
+  toString(): string;
 }
 
 export interface SEOContractConfig {
@@ -208,7 +275,8 @@ export interface SEOIssue {
 export declare function buildSeoPayload(
   entity: SEOEntity,
   route: string,
-  config: SEOConfig
+  config: SEOConfig,
+  overrides?: SEOOverrides
 ): SEOPayload;
 
 export declare function buildSeoPayloadWithOverrides(
@@ -251,10 +319,89 @@ export declare function cleanUrl(url: string): {
 
 export declare function cleanQuery(query: string): string;
 
-export interface SchemaRegistry {
+export type SchemaGenerator = (
+  entity: SEOEntity,
+  config: SEOConfig,
+  canonical: string,
+  title: string,
+  description: string | null,
+  ogImage: string | null
+) => object | null | undefined;
+
+/** Config-scoped registry of custom JSON-LD generators. */
+export declare class SchemaRegistry {
+  register(schemaType: string, generator: SchemaGenerator): SchemaGenerator;
+  register(generator: SchemaGenerator): SchemaGenerator;
+  unregister(schemaType: string): void;
+  get(schemaType: string): SchemaGenerator | undefined;
+  has(schemaType: string): boolean;
+  listTypes(): string[];
+}
+
+export type HookFunc = (
+  payload: Record<string, unknown>,
+  entity: SEOEntity,
+  config: SEOConfig
+) => Record<string, unknown>;
+
+/** Config-scoped hook registry. */
+export declare class HookRegistry {
+  register(name: string, fn: HookFunc): HookFunc;
+  hook(name: string): (fn: HookFunc) => HookFunc;
+  unregister(name: string, fn: HookFunc): void;
+  run(
+    name: string,
+    payload: Record<string, unknown>,
+    entity: SEOEntity,
+    config: SEOConfig
+  ): Record<string, unknown>;
+  clear(name?: string): void;
+  size(): number;
+}
+
+/** Rust-backed type-name introspection registry. */
+export interface RustSchemaRegistry {
   register(typeName: string): void;
   has(typeName: string): boolean;
   listTypes(): string[];
 }
 
-export declare function getSchemaRegistry(): SchemaRegistry;
+export declare function getSchemaRegistry(): RustSchemaRegistry;
+
+/** Create a published blog post entity. */
+export declare function fromBlogPost(input: {
+  title: string;
+  bodyHtml: string;
+  slug?: string;
+  author?: string;
+  excerpt?: string;
+  breadcrumbs?: Breadcrumb[];
+}): SEOEntity;
+
+/** Create a published product entity. */
+export declare function fromProduct(input: {
+  name: string;
+  sku: string;
+  price: string | number;
+  currency?: string;
+  availability?: string;
+  description?: string;
+  breadcrumbs?: Breadcrumb[];
+}): SEOEntity;
+
+/** Create a published FAQ page entity. */
+export declare function fromFaq(input: {
+  questions: FAQItem[];
+  title?: string;
+  description?: string;
+  breadcrumbs?: Breadcrumb[];
+}): SEOEntity;
+
+export declare class EaseoError extends Error {
+  code: string;
+}
+export declare class InvalidUrlError extends EaseoError {}
+export declare class ConfigurationError extends EaseoError {}
+export declare class EntityError extends EaseoError {}
+export declare class SchemaError extends EaseoError {}
+export declare class ContractError extends EaseoError {}
