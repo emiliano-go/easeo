@@ -17,10 +17,14 @@ describe("@easeo/core type declarations", () => {
     assert(content.includes("export interface SEOPayload"));
     assert(content.includes("export interface SEOOverrides"));
     assert(content.includes("export interface SEOContract"));
-    assert(content.includes("export interface SchemaRegistry"));
+    assert(content.includes("export declare class SchemaRegistry"));
+    assert(content.includes("export declare class HookRegistry"));
     assert(content.includes("buildSeoPayload"));
     assert(content.includes("buildSeoPayloadWithOverrides"));
     assert(content.includes("buildSeoContract"));
     assert(content.includes("validatePayload"));
+    assert(content.includes("fromBlogPost"));
+    assert(content.includes("fromProduct"));
+    assert(content.includes("fromFaq"));
   });
 });
