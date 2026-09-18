@@ -1,28 +1,149 @@
 [project]
 site_name = "easeo"
-site_description = "Deterministic SEO metadata generation for content platforms"
+site_description = "Deterministic SEO metadata generation for content platforms. Rust core with Python and JavaScript/TypeScript bindings."
 site_url = "https://easeo.emiliano-go.com/"
 docs_dir = "docs"
 site_dir = "site"
 
 copyright = "&copy; 2026 Emiliano Gandini Outeda"
 
-# ==============================================================================
-# Theme
-# ==============================================================================
+extra_css = ["stylesheets/extra.css"]
 
 [project.theme]
 variant = "modern"
-custom_dir = "overrides"
+custom_dir = "docs/overrides"
+font.text = "Ubuntu"
+font.code = "JetBrains Mono"
+features = [
+    "navigation.instant",
+    "navigation.instant.prefetch",
+    "navigation.tabs",
+    "navigation.indexes",
+    "navigation.top",
+    "navigation.footer",
+    "search.suggest",
+    "search.highlight",
+    "content.code.copy",
+    "content.code.annotate",
+    "toc.follow",
+]
 
-# ==============================================================================
-# Markdown extensions
-# ==============================================================================
+[[project.theme.palette]]
+scheme = "default"
+primary = "custom"
+accent = "custom"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+scheme = "slate"
+primary = "custom"
+accent = "custom"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to light mode"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/github"
+link = "https://github.com/emiliano-go/easeo"
+name = "easeo on GitHub"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/python"
+link = "https://pypi.org/project/easeo/"
+name = "easeo on PyPI"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/npm"
+link = "https://www.npmjs.com/package/@easeo/core"
+name = "@easeo/core on npm"
+
+[[project.nav]]
+"Home" = "index.md"
+
+[[project.nav]]
+"Tutorial" = [
+    "tutorial/index.md",
+    { "Installation" = "tutorial/installation.md" },
+    { "First Payload" = "tutorial/first-payload.md" },
+    { "Fallback and Overrides" = "tutorial/fallback-and-overrides.md" },
+    { "Rendering HTML" = "tutorial/rendering.md" },
+    { "Contracts" = "tutorial/contracts.md" },
+    { "Configuration" = "tutorial/configuration.md" },
+]
+
+[[project.nav]]
+"Concepts" = [
+    "concepts/index.md",
+    { "Determinism" = "concepts/determinism.md" },
+    { "Entity Model" = "concepts/entity-model.md" },
+    { "Payload Model" = "concepts/payload-model.md" },
+    { "Fallback Chains" = "concepts/fallback-chains.md" },
+    { "URL Normalization" = "concepts/url-normalization.md" },
+    { "JSON-LD Schemas" = "concepts/schemas.md" },
+    { "Validation" = "concepts/validation.md" },
+]
+
+[[project.nav]]
+"Guides" = [
+    "guides/index.md",
+    { "Custom JSON-LD" = "guides/custom-schemas.md" },
+    { "Hooks" = "guides/hooks.md" },
+    { "Contracts in CI" = "guides/contracts-in-ci.md" },
+    { "Framework Recipes" = "guides/framework-recipes.md" },
+    { "Migration from seoslug" = "guides/migration-from-seoslug.md" },
+]
+
+[[project.nav]]
+"Reference" = [
+    { "Python API" = "reference/python-api.md" },
+    { "JavaScript API" = "reference/javascript-api.md" },
+    { "Rust API" = "reference/rust-api.md" },
+    { "Contracts" = "reference/contracts.md" },
+    { "Errors" = "reference/errors.md" },
+]
+
+[[project.nav]]
+"Integrations" = [
+    "integrations/index.md",
+    { "JavaScript" = [
+        { "Next.js" = "integrations/next.md" },
+        { "Astro" = "integrations/astro.md" },
+        { "Vite" = "integrations/vite.md" },
+        { "Nuxt" = "integrations/nuxt.md" },
+        { "SvelteKit" = "integrations/sveltekit.md" },
+        { "React" = "integrations/react.md" },
+    ] },
+    { "Python" = [
+        { "FastAPI" = "integrations/fastapi.md" },
+        { "Django" = "integrations/django.md" },
+        { "Flask" = "integrations/flask.md" },
+        { "Zensical" = "integrations/zensical.md" },
+    ] },
+]
+
+[[project.nav]]
+"Recipes" = [
+    "recipes/index.md",
+    { "Blog Post" = "recipes/blog-post.md" },
+    { "Product Page" = "recipes/product-page.md" },
+    { "Category Page" = "recipes/category-page.md" },
+    { "Search Results" = "recipes/search-results.md" },
+    { "Multi Language" = "recipes/multi-language.md" },
+    { "Custom Schema" = "recipes/custom-schema.md" },
+]
+
+[[project.nav]]
+"Examples" = "examples.md"
+
+[[project.nav]]
+"About" = [
+    { "Why easeo" = "about/why-easeo.md" },
+    { "Comparison" = "about/comparison.md" },
+    { "Changelog" = "about/changelog.md" },
+    { "Contributing" = "about/contributing.md" },
+]
 
 [project.markdown_extensions]
-tables = {}
-admonition = {}
-toc = { permalink = true }
 "easeo.contrib.zensical" = {
   canonical_host = "easeo.emiliano-go.com",
   public_base_url = "https://easeo.emiliano-go.com/",
@@ -32,16 +153,31 @@ toc = { permalink = true }
   locale = "en_US",
   twitter_site = "@emiliano_go_",
   auto_generate_schema = true,
-  debug_dir = ".seo-debug",
 }
 
-[project.markdown_extensions.pymdownx]
-highlight = { anchor_linenums = true, line_spans = "__span", pygments_lang_class = true }
-inlinehilite = {}
-snippets = {}
-superfences = {}
-tabbed = { alternate_style = true }
-tasklist = { custom_checkbox = true }
+[project.markdown_extensions.tables]
+
+[project.markdown_extensions.admonition]
+
+[project.markdown_extensions.toc]
+permalink = true
+
+[project.markdown_extensions.pymdownx.highlight]
+anchor_linenums = true
+line_spans = "__span"
+pygments_lang_class = true
+
+[project.markdown_extensions.pymdownx.inlinehilite]
+
+[project.markdown_extensions.pymdownx.snippets]
+
+[project.markdown_extensions.pymdownx.superfences]
+
+[project.markdown_extensions.pymdownx.tabbed]
+alternate_style = true
+
+[project.markdown_extensions.pymdownx.tasklist]
+custom_checkbox = true
 
 [project.markdown_extensions.attr_list]
 
