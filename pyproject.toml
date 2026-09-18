@@ -46,7 +46,19 @@ Documentation = "https://github.com/emiliano-go/easeo#readme"
 Repository = "https://github.com/emiliano-go/easeo"
 Changelog = "https://github.com/emiliano-go/easeo/blob/main/CHANGELOG.md"
 
+[dependency-groups]
+dev = [
+    "maturin>=1.0,<2.0",
+    "pytest>=8.0",
+    "zensical",
+    "markdown>=3.5",
+]
+
 [tool.maturin]
+# The workspace root Cargo.toml has no [package], so point maturin at the
+# Python crate explicitly. Without this, `uv run` / `pip install .` try to
+# build the root manifest and fail with "missing field `package`".
+manifest-path = "crates/easeo-python/Cargo.toml"
 features = ["pyo3/extension-module"]
 module-name = "easeo._easeo_native"
 python-source = "python"
