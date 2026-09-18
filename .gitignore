@@ -9,6 +9,8 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+site/
+.seo-debug/
 .DS_Store
 .pytest_cache/
 .venv*/
