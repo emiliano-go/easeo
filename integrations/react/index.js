@@ -86,4 +86,6 @@ function EaseoHead({ entity, route, config }) {
   return null;
 }
 
-module.exports = { EaseoHead, default: EaseoHead };
+module.exports = EaseoHead;
+module.exports.EaseoHead = EaseoHead;
+module.exports.default = EaseoHead;
