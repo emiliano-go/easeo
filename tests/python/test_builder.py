@@ -147,17 +147,76 @@ class TestBuilderWithPayload:
         assert "BreadcrumbList" in payload.render_html()
 
 
-class TestSchemaRegistryHonesty:
-    def test_register_raises_with_guidance(self):
-        from easeo import SchemaRegistry
+class TestSchemaRegistry:
+    def test_register_and_apply_generator(self):
+        from easeo import SEOConfig, SEOEntity, SchemaRegistry, build_seo_payload
 
         registry = SchemaRegistry()
-        with pytest.raises(NotImplementedError, match="schema_jsonld"):
-            registry.register("Podcast", lambda ctx: {"@type": "Podcast"})
 
-    def test_has_and_list_types_still_work(self):
+        @registry.register("Article")
+        def article(entity, config, canonical, title, description, og_image):
+            return {"@context": "https://schema.org", "@type": "PodcastEpisode", "name": title}
+
+        config = SEOConfig(
+            canonical_host="example.com",
+            public_base_url="https://example.com",
+            schema_registry=registry,
+        )
+        entity = SEOEntity(entity_type="post", title="Ep 1")
+        payload = build_seo_payload(entity, "/podcast/1", config)
+        assert payload.schema_jsonld["@type"] == "PodcastEpisode"
+
+    def test_registry_scoped_to_config(self):
+        from easeo import SEOConfig, SEOEntity, SchemaRegistry, build_seo_payload
+
+        registry = SchemaRegistry()
+        registry.register("Article", lambda *a: {"@type": "Custom"})
+        with_registry = SEOConfig(
+            canonical_host="example.com",
+            public_base_url="https://example.com",
+            schema_registry=registry,
+        )
+        plain = SEOConfig(
+            canonical_host="example.com",
+            public_base_url="https://example.com",
+        )
+        entity = SEOEntity(entity_type="post", title="T")
+        assert build_seo_payload(entity, "/x", with_registry).schema_jsonld["@type"] == "Custom"
+        assert build_seo_payload(entity, "/x", plain).schema_jsonld["@type"] == "Article"
+
+    def test_unregister_restores_builtin(self):
+        from easeo import SEOConfig, SEOEntity, SchemaRegistry, build_seo_payload
+
+        registry = SchemaRegistry()
+        registry.register("Article", lambda *a: {"@type": "Custom"})
+        config = SEOConfig(
+            canonical_host="example.com",
+            public_base_url="https://example.com",
+            schema_registry=registry,
+        )
+        entity = SEOEntity(entity_type="post", title="T")
+        registry.unregister("Article")
+        assert build_seo_payload(entity, "/x", config).schema_jsonld["@type"] == "Article"
+
+    def test_has_and_list_types(self):
         from easeo import SchemaRegistry
 
         registry = SchemaRegistry()
         assert registry.has("Podcast") is False
         assert isinstance(registry.list_types(), list)
+        registry.register("Podcast", lambda *a: {"@type": "Podcast"})
+        assert registry.has("Podcast") is True
+        assert registry.list_types() == ["Podcast"]
+
+    def test_non_dict_generator_raises(self):
+        from easeo import SEOConfig, SEOEntity, SchemaRegistry, build_seo_payload
+
+        registry = SchemaRegistry()
+        registry.register("Article", lambda *a: "not a dict")
+        config = SEOConfig(
+            canonical_host="example.com",
+            public_base_url="https://example.com",
+            schema_registry=registry,
+        )
+        with pytest.raises(ValueError, match="must return a dict"):
+            build_seo_payload(SEOEntity(entity_type="post", title="T"), "/x", config)
