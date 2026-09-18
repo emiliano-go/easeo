@@ -70,7 +70,7 @@ jobs:
       - name: Install napi CLI
         run: npm install -g @napi-rs/cli
       - name: Build native module
-        run: cd packages/core && napi build --release --manifest-path ../../crates/easeo-node/Cargo.toml && cp ../../crates/easeo-node/*.node .
+        run: cd packages/core && napi build --platform --release --manifest-path ../../crates/easeo-node/Cargo.toml && cp ../../crates/easeo-node/*.node .
       - name: Run Node tests
         run: node --test tests/javascript/*.cjs
 
@@ -118,65 +118,91 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: [conformance, lint]
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
-          - os: macos-latest
-            target: aarch64-apple-darwin
-          - os: macos-13
+          - os: macos-15-intel
             target: x86_64-apple-darwin
+          - os: macos-15
+            target: aarch64-apple-darwin
           - os: windows-latest
             target: x86_64-pc-windows-msvc
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install maturin
-        run: pip install maturin
       - name: Build wheel
-        run: maturin build --release --target ${{ matrix.target }} -m crates/easeo-python/Cargo.toml
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          manylinux: auto
+          args: --release --out dist -m crates/easeo-python/Cargo.toml
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: wheels-${{ matrix.target }}
           path: dist/*.whl
+          if-no-files-found: error
 
   # ===========================================================================
   # Build npm package
   # ===========================================================================
 
   build-npm:
-    name: Build npm package
-    runs-on: ubuntu-latest
+    name: Build npm binding (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
     needs: [conformance, lint]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            musl: "true"
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            cross: "true"
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+          - os: macos-15
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          registry-url: "https://registry.npmjs.org"
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Install musl toolchain
+        if: matrix.musl
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
       - name: Install napi CLI
         run: npm install -g @napi-rs/cli
-      - name: Build native modules
-        run: cd packages/core && napi build --release --manifest-path ../../crates/easeo-node/Cargo.toml && cp ../../crates/easeo-node/*.node .
-      - name: Upload artifact
+      - name: Build native module
+        working-directory: packages/core
+        shell: bash
+        env:
+          CC_x86_64_unknown_linux_musl: musl-gcc
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
+        run: |
+          CROSS_ARGS=""
+          if [ "${{ matrix.cross }}" = "true" ]; then CROSS_ARGS="--use-napi-cross"; fi
+          napi build --platform --release --target ${{ matrix.target }} $CROSS_ARGS \
+            --manifest-path ../../crates/easeo-node/Cargo.toml
+          cp ../../crates/easeo-node/*.node .
+      - name: Upload binding
         uses: actions/upload-artifact@v4
         with:
-          name: npm-package
-          path: |
-            packages/core/index.js
-            packages/core/index.d.ts
-            packages/core/*.node
-            packages/core/package.json
-            packages/core/npm/
+          name: bindings-${{ matrix.target }}
+          path: packages/core/*.node
+          if-no-files-found: error
 
   # ===========================================================================
   # Publish to PyPI (OIDC trusted publishing)
@@ -223,19 +249,47 @@ jobs:
         with:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
-      - run: npm install -g npm@latest
-      - name: Download npm package
+      - name: Ensure npm supports trusted publishing
+        run: npm install -g npm@latest
+      - name: Download all bindings
         uses: actions/download-artifact@v4
         with:
-          name: npm-package
+          pattern: bindings-*
+          merge-multiple: true
           path: packages/core/
-      - name: Install napi CLI
-        run: npm install -g @napi-rs/cli
-      - name: Run prepublish
-        run: napi prepublish -t npm
-        working-directory: packages/core/
       - name: Publish to npm
         run: npm publish --access public --provenance
         working-directory: packages/core/
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # First publish of a new package cannot use OIDC trusted publishing, so these
+  # use NPM_TOKEN. Switch to OIDC once each package exists on the registry.
+
+  publish-integrations:
+    name: Publish @easeo/${{ matrix.package }}
+    runs-on: ubuntu-latest
+    needs: publish-npm
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [next, vite, astro, nuxt, sveltekit, react]
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/@easeo/${{ matrix.package }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+      - name: Ensure npm supports trusted publishing
+        run: npm install -g npm@latest
+      - name: Publish to npm
+        run: npm publish --access public --provenance
+        working-directory: integrations/${{ matrix.package }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
