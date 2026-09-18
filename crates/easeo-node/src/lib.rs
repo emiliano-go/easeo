@@ -218,6 +218,9 @@ pub struct NodeSEOPayload {
     pub open_graph: NodeOpenGraph,
     pub twitter: NodeTwitter,
     pub schema_json_ld: Option<serde_json::Value>,
+    /// Extra fields added by config-scoped hooks. Kept sorted for
+    /// deterministic serialization.
+    pub extra: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 #[napi]
@@ -314,6 +317,43 @@ impl NodeSEOPayload {
             og,
             twitter,
             schema_jsonld: schema,
+            extra: self.extra.clone(),
+        }
+    }
+
+    /// Build a Node payload from its core equivalent.
+    pub fn from_core(payload: core::SEOPayload) -> Self {
+        Self {
+            title: payload.title,
+            description: payload.description,
+            canonical: payload.canonical,
+            robots: payload.robots,
+            open_graph: NodeOpenGraph {
+                og_type: payload.og.og_type,
+                title: payload.og.title,
+                description: payload.og.description,
+                url: payload.og.url,
+                image: payload.og.image,
+                image_width: payload.og.image_width,
+                image_height: payload.og.image_height,
+                image_alt: payload.og.image_alt,
+                site_name: payload.og.site_name,
+                locale: payload.og.locale,
+                locale_alternate: payload.og.locale_alternate,
+                audio: payload.og.audio,
+                video: payload.og.video,
+            },
+            twitter: NodeTwitter {
+                card: payload.twitter.card,
+                title: payload.twitter.title,
+                description: payload.twitter.description,
+                image: payload.twitter.image,
+                image_alt: payload.twitter.image_alt,
+                site: payload.twitter.site,
+                creator: payload.twitter.creator,
+            },
+            schema_json_ld: payload.schema_jsonld,
+            extra: payload.extra,
         }
     }
 }
@@ -337,37 +377,17 @@ pub fn build_seo_payload(
     let payload = core::build_seo_payload(&core_entity, &route, &core_config)
         .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
-    Ok(NodeSEOPayload {
-        title: payload.title,
-        description: payload.description,
-        canonical: payload.canonical,
-        robots: payload.robots,
-        open_graph: NodeOpenGraph {
-            og_type: payload.og.og_type,
-            title: payload.og.title,
-            description: payload.og.description,
-            url: payload.og.url,
-            image: payload.og.image,
-            image_width: payload.og.image_width,
-            image_height: payload.og.image_height,
-            image_alt: payload.og.image_alt,
-            site_name: payload.og.site_name,
-            locale: payload.og.locale,
-            locale_alternate: payload.og.locale_alternate,
-            audio: payload.og.audio,
-            video: payload.og.video,
-        },
-        twitter: NodeTwitter {
-            card: payload.twitter.card,
-            title: payload.twitter.title,
-            description: payload.twitter.description,
-            image: payload.twitter.image,
-            image_alt: payload.twitter.image_alt,
-            site: payload.twitter.site,
-            creator: payload.twitter.creator,
-        },
-        schema_json_ld: payload.schema_jsonld,
-    })
+    Ok(NodeSEOPayload::from_core(payload))
+}
+
+/// Rebuild a payload from its wire dict. Used by the JS hook layer, which
+/// post-processes `toObject()` and needs the result to flow back into
+/// `hash()`, `renderHtml()`, `etag()`, etc.
+#[napi]
+pub fn payload_from_dict(dict: serde_json::Value) -> Result<NodeSEOPayload, napi::Error> {
+    let payload =
+        core::SEOPayload::from_dict(&dict).map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    Ok(NodeSEOPayload::from_core(payload))
 }
 
 // ── Node wrapper for SEOOverrides ────────────────────────────────────
@@ -482,37 +502,7 @@ pub fn build_seo_payload_with_overrides(
         core::build_seo_payload_with_overrides(&core_entity, &route, &core_config, &core_overrides)
             .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
-    Ok(NodeSEOPayload {
-        title: payload.title,
-        description: payload.description,
-        canonical: payload.canonical,
-        robots: payload.robots,
-        open_graph: NodeOpenGraph {
-            og_type: payload.og.og_type,
-            title: payload.og.title,
-            description: payload.og.description,
-            url: payload.og.url,
-            image: payload.og.image,
-            image_width: payload.og.image_width,
-            image_height: payload.og.image_height,
-            image_alt: payload.og.image_alt,
-            site_name: payload.og.site_name,
-            locale: payload.og.locale,
-            locale_alternate: payload.og.locale_alternate,
-            audio: payload.og.audio,
-            video: payload.og.video,
-        },
-        twitter: NodeTwitter {
-            card: payload.twitter.card,
-            title: payload.twitter.title,
-            description: payload.twitter.description,
-            image: payload.twitter.image,
-            image_alt: payload.twitter.image_alt,
-            site: payload.twitter.site,
-            creator: payload.twitter.creator,
-        },
-        schema_json_ld: payload.schema_jsonld,
-    })
+    Ok(NodeSEOPayload::from_core(payload))
 }
 
 // ── Contract ──────────────────────────────────────────────────────────
