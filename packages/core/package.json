@@ -11,21 +11,14 @@
   },
   "files": [
     "index.js",
-    "index.d.ts"
+    "index.d.ts",
+    "*.node"
   ],
   "scripts": {
-    "build": "napi build --release",
-    "prepublishOnly": "napi prepublish -t npm"
+    "build": "napi build --platform --release"
   },
   "napi": {
-    "name": "easeo",
-    "triples": {
-      "defaults": true,
-      "additional": [
-        "x86_64-unknown-linux-musl",
-        "aarch64-unknown-linux-gnu"
-      ]
-    }
+    "binaryName": "easeo"
   },
   "cargo": {
     "package": "easeo-node",
