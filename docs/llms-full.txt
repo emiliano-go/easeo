@@ -1,0 +1,4395 @@
+# easeo Documentation
+> Full documentation for easeo: deterministic SEO payload generation
+> Source: https://easeo.emiliano-go.com
+> Pages: 50
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/about/changelog/
+========================================================================
+
+# Changelog { #changelog }
+
+## 0.1.0
+
+- Rust core with full SEO payload generation
+- Python bindings via PyO3
+- JavaScript/TypeScript bindings via napi-rs
+- URL normalization and tracking parameter removal
+- JSON-LD schema generation
+- SEO contract system
+- Deterministic output with SHA-256 hashing
+- Config-scoped hooks and schema registries
+- Framework integrations for Next.js, Astro, Vite, Nuxt, SvelteKit, React,
+  FastAPI, Django, Flask, and Zensical
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/about/comparison/
+========================================================================
+
+# Comparison: manual vs easeo { #comparison }
+
+| Task | Manual | easeo |
+|---|---|---|
+| Canonical URL | Construct by hand | `build_seo_payload(entity, path, config)` |
+| Open Graph tags | 10+ `<meta>` tags | `payload.og` or `payload.render_html()` |
+| Twitter Cards | 6+ `<meta>` tags | `payload.twitter` or `payload.render_html()` |
+| JSON-LD schema | Hand-written schema.org JSON | Auto-generated, extensible via registry |
+| BreadcrumbList | Manual JSON-LD | `Breadcrumb(name, url)` auto-generates |
+| URL normalization | HTTPS, slash, case logic | `URLPolicy` |
+| HTML excerpt | Strip tags, decode, truncate | Built-in `body_html` snippet |
+| Validation | Manual audit of lengths | `validate_payload()` / `emit_warnings` |
+| HTML rendering | A template per tag | `payload.render_html()` |
+| Content ETag | Manual hashing | `payload.etag()` |
+| Testing | Manual fixtures | Deterministic: `payload == expected_dict` |
+| Custom fields | Edit every template | Config-scoped `HookRegistry` |
+
+## Why determinism matters
+
+```python
+p1 = build_seo_payload(entity, path, config)
+p2 = build_seo_payload(entity, path, config)
+assert p1 == p2  # always True
+```
+
+Most SEO tooling produces different output for identical input: timestamps,
+cache busters, unstable dict ordering. easeo does none of that, so SEO becomes
+a build artifact you can commit, diff, cache, and validate in CI.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/about/contributing/
+========================================================================
+
+# Contributing { #contributing }
+
+## Repository layout { #layout }
+
+```text
+easeo/
+├── Cargo.toml                 # Rust workspace
+├── pyproject.toml             # maturin / Python package
+├── crates/
+│   ├── easeo-core/            # all logic
+│   ├── easeo-python/          # PyO3 bindings
+│   └── easeo-node/            # napi-rs bindings
+├── packages/core/             # @easeo/core wrapper
+├── integrations/              # JS framework integrations
+├── python/easeo/              # Python package, adapters, contrib
+├── tests/                     # Python, JavaScript, conformance
+├── fixtures/                  # shared fixtures
+├── schemas/                   # JSON schemas
+└── docs/                      # this documentation
+    ├── overrides/             # Zensical theme overrides (main.html, partials)
+    └── stylesheets/extra.css  # theme CSS (accent, mobile drawer, tab dropdowns)
+```
+
+## Build and test { #build }
+
+```bash
+# Rust
+cargo test --workspace
+cargo fmt --all: --check
+cargo clippy --workspace: -D warnings
+
+# Python
+maturin develop -m crates/easeo-python/Cargo.toml
+pytest tests/python/
+
+# JavaScript
+cd packages/core
+napi build --platform --release --manifest-path ../../crates/easeo-node/Cargo.toml
+cp ../../crates/easeo-node/*.node .
+cd ../..
+node --test tests/javascript/*.cjs
+
+# Cross-language conformance
+python tests/conformance/test_conformance.py
+```
+
+## Rules of the codebase { #rules }
+
+* **All logic lives in Rust.** The Python and JavaScript packages are bindings
+  and thin ergonomics wrappers. Do not duplicate resolution logic in a binding.
+* **Determinism is non-negotiable.** No timestamps, randomness, environment
+  reads, or unordered maps in output. Use `BTreeMap` for anything that
+  serializes.
+* **Cross-language parity.** A change to the Python API needs the JavaScript
+  equivalent, and a conformance test where output could differ.
+* **Escaping happens in the core.** HTML and JSON-LD escaping is centralized so
+  every binding is safe.
+
+## Documentation { #docs }
+
+Docs live in `docs/` and build with Zensical. The site uses the easeo
+`easeo.contrib.zensical` extension to generate per-page SEO tags, so easeo
+must be importable by the same interpreter that runs Zensical.
+
+[`uv`](https://docs.astral.sh/uv/) handles this in one command. It builds the
+Rust extension from `crates/easeo-python/` into a local `.venv` and runs
+Zensical with the `dev` dependency group, which includes `zensical` and
+`markdown`:
+
+```bash
+uv run zensical serve     # live preview on http://localhost:8000
+uv run zensical build     # writes site/
+uv run python scripts/generate_llms_full.py   # regenerate docs/llms-full.txt
+```
+
+If you prefer a manual environment, install the extra and run Zensical
+directly:
+
+```bash
+pip install -e ".[zensical]"
+zensical serve
+```
+
+Keep prose free of em dashes and double-hyphen separators; use commas, colons,
+parentheses, or semicolons.
+
+## Adding a framework integration { #integration }
+
+1. Create a directory under `integrations/` with `index.js`, `index.d.ts`, and
+   `package.json`.
+2. Support both default and named exports.
+3. Call `@easeo/core` for all payload building. Never re-implement logic.
+4. Add a test under `tests/javascript/`.
+5. Add a page under `docs/integrations/` and a nav entry in `zensical.toml`.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/about/why-easeo/
+========================================================================
+
+# Why easeo { #why-easeo }
+
+Most SEO libraries do too much. They score content, analyze keywords, rewrite
+descriptions, and pull in a browser engine. easeo does one thing: **generate
+deterministic SEO metadata from content entities**.
+
+## The problem with generated metadata { #problem }
+
+SEO metadata is usually assembled ad hoc: a title here, an Open Graph block
+there, a JSON-LD template somewhere else. It drifts. Nothing tests it. When a
+deploy changes a canonical URL, no one notices until rankings move.
+
+The root cause is that the output is not treated like code. It has no
+deterministic contract, so it cannot be snapshotted or diffed.
+
+## The easeo answer { #answer }
+
+Turn the metadata into a pure function with a stable output.
+
+```text
+SEOEntity + route + SEOConfig -> SEOPayload
+```
+
+Same inputs, same bytes, every time. No timestamps, no randomness, no
+environment reads, no hidden I/O. That makes the output:
+
+- **snapshot testable**: assert against a committed fixture
+- **hashable**: generate stable ETags
+- **cacheable**: memoize without invalidation logic
+- **diffable**: compare staging and production
+- **CI-validatable**: commit SEO intent as a contract
+
+## Why Rust { #rust }
+
+The core is Rust so the same behavior ships to Python and JavaScript, not two
+implementations that drift apart. The bindings are thin; all logic lives in one
+place. Cross-language conformance tests assert that Python and Rust produce
+byte-identical output.
+
+## What it is not { #not }
+
+- Not a crawler
+- Not a scorer
+- Not a keyword tool
+- Not a browser automation framework
+- Not an analytics platform
+
+## Design principles { #principles }
+
+1. **Deterministic**: same input, same output.
+2. **Pure**: no network, no I/O, no randomness, no environment reads.
+3. **Framework-agnostic**: the core knows nothing about React or Django.
+4. **Minimal surface**: one primary function.
+5. **Contract-first**: SEO intent is machine-readable and testable.
+6. **Zero ceremony**: adapters are plug-and-play.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/concepts/determinism/
+========================================================================
+
+# Determinism { #determinism }
+
+Identical inputs always produce identical outputs. Always.
+
+=== "Python"
+
+    ```python
+    p1 = build_seo_payload(entity, "/blog/post", config)
+    p2 = build_seo_payload(entity, "/blog/post", config)
+    assert p1 == p2
+    ```
+
+=== "JavaScript"
+
+    ```js
+    const p1 = buildSeoPayload(entity, "/blog/post", config);
+    const p2 = buildSeoPayload(entity, "/blog/post", config);
+    console.assert(p1.equals(p2));
+    ```
+
+## What is forbidden in the output { #forbidden }
+
+* Current timestamp
+* Random UUID
+* Unordered serialization
+* Environment-dependent values
+* Hash maps in place of ordered maps
+
+Mapping output uses `BTreeMap`, so key order is sorted and stable. JSON-LD
+objects, Open Graph, and the canonical dict all serialize identically across
+runs.
+
+## What this enables { #enables }
+
+| Capability | How it works |
+|---|---|
+| Snapshot testing | Commit expected payloads and assert equality in tests |
+| CI validation | A changed payload fails the build instead of shipping |
+| Caching | `@lru_cache` on `build_seo_payload` is safe forever |
+| Content-addressed artifacts | `payload.hash()` is stable across machines |
+| Deployment diffs | Compare staging and production payloads to find drift |
+
+## Equality and hashing { #equality }
+
+Python payloads compare against other payloads and against plain dicts:
+
+```python
+assert payload == other_payload
+assert payload == payload.to_dict()
+```
+
+Both languages expose a stable SHA-256 hash and an HTTP ETag:
+
+=== "Python"
+
+    ```python
+    payload.hash()   # 64 hex characters
+    payload.etag()   # '"<hash>"'
+    ```
+
+=== "JavaScript"
+
+    ```js
+    payload.hash();
+    payload.etag();
+    ```
+
+## Hooks and determinism { #hooks }
+
+easeo allows post-processing through config-scoped hooks. Because the hooks
+registry is part of the `SEOConfig`, it is an ordinary input: the same config
+produces the same output every time. There is no global mutable registry, so
+two configs in the same process cannot interfere.
+
+!!! note "Determinism is a property of your hooks too"
+
+    A hook that reads the clock or a random source breaks determinism for the
+    config that carries it. Keep hooks pure.
+
+## Recap { #recap }
+
+* Same inputs, same bytes, everywhere.
+* Ordered maps and no ambient state are what make it true.
+* This is the foundation for snapshot testing, caching, and CI diffs.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/concepts/entity-model/
+========================================================================
+
+# Entity Model { #entity-model }
+
+An `SEOEntity` is the content you already have, reshaped into the fields easeo
+knows how to use. Only `entity_type` is required; every other field is
+optional.
+
+## All fields { #fields }
+
+| Field | Type | Feeds |
+|---|---|---|
+| `entity_type` | `str` (required) | Meta plus schema selection |
+| `title` | `str \| None` | Title, `og:title`, schema |
+| `excerpt` | `str \| None` | Description, `og:description` |
+| `body_html` | `str \| None` | Description snippet when no excerpt |
+| `slug` | `str \| None` | Metadata only, not emitted |
+| `status` | `str \| None` | Robots (`"published"` allows indexing) |
+| `featured_image` | `SEOImage \| str \| None` | `og:image` and schema image |
+| `published_at` | `str \| None` | Schema `datePublished` |
+| `updated_at` | `str \| None` | Schema `dateModified` |
+| `author_name` | `str \| None` | Schema author |
+| `breadcrumbs` | `list[Breadcrumb] \| None` | `BreadcrumbList` JSON-LD |
+| `sku` | `str \| None` | Product schema |
+| `price` | `str \| None` | Product schema |
+| `price_currency` | `str \| None` | Product schema |
+| `availability` | `str \| None` | Product schema |
+| `same_as` | `list[str] \| None` | Organization `sameAs` |
+| `address` | `str \| None` | LocalBusiness address |
+| `faq_items` | `list[FAQItem] \| None` | `FAQPage` schema |
+
+## Entity types { #types }
+
+The `entity_type` drives two things: the Open Graph type and the default
+schema mapping.
+
+| Entity type | OG type | Schema |
+|---|---|---|
+| `home` | `website` | `WebPage` |
+| `post` | `article` | `Article` |
+| `page` | `website` | `WebPage` |
+| `video` | `article` | `VideoObject` |
+| `taxonomy` | `website` | `CollectionPage` |
+| `search` | `website` | `SearchResultsPage` |
+| `product` | `website` | `Product` |
+| `organization` | `website` | `Organization` |
+| `local_business` | `website` | `LocalBusiness` |
+| `faq` | `website` | `FAQPage` |
+| `other` | `website` | none |
+
+Override the mapping with `schema_type_map` on the config, or replace a single
+page's schema with `SEOOverrides.schema_jsonld`.
+
+## Building an entity { #building }
+
+Three equivalent ways:
+
+=== "Constructor"
+
+    ```python
+    from easeo import SEOEntity
+
+    entity = SEOEntity(
+        entity_type="post",
+        title="Hello",
+        excerpt="A post.",
+    )
+    ```
+
+=== "Builder"
+
+    ```python
+    from easeo import SEOEntityBuilder
+
+    entity = (
+        SEOEntityBuilder("post")
+        .title("Hello")
+        .excerpt("A post.")
+        .breadcrumb("Home", "/")
+        .build()
+    )
+    ```
+
+=== "Factory"
+
+    ```python
+    from easeo import from_blog_post
+
+    entity = from_blog_post(title="Hello", body_html="<p>A post.</p>")
+    ```
+
+## Normalization { #normalization }
+
+Optional string fields are stripped; empty strings become `None`. Lists such
+as `same_as` are deduplicated. This keeps the output stable regardless of
+whitespace in your source data.
+
+## Recap { #recap }
+
+* `entity_type` selects the OG type and schema.
+* Most fields feed more than one output target.
+* Constructor, builder, and factories are interchangeable.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/concepts/fallback-chains/
+========================================================================
+
+# Fallback Chains { #fallback-chains }
+
+Every field resolves through a priority chain; the first non-empty value wins.
+Set site-wide defaults in `SEOConfig`, override per entity in `SEOEntity`, and
+fine-tune per page with `SEOOverrides`.
+
+## General precedence
+
+1. **`SEOOverrides`**: per-call overrides (highest)
+2. **`SEOEntity`**: content entity fields
+3. **`SEOConfig`**: site-wide defaults
+4. **Hardcoded defaults**: library fallbacks (lowest)
+
+## title
+
+1. `SEOOverrides.meta_title`
+2. `SEOEntity.title`
+3. `"Untitled"`
+
+The config `title_template` is then applied unless `skip_title_template=True`.
+
+```python
+config = SEOConfig(..., title_template="{title} - My Site")
+# "My Post" -> "My Post - My Site"
+```
+
+## description
+
+1. `SEOOverrides.meta_description`
+2. `SEOEntity.excerpt`
+3. Auto snippet from `SEOEntity.body_html` (max 160 chars)
+4. `""`
+
+The body snippet strips scripts and styles, normalizes whitespace, and
+truncates on a character boundary with an ellipsis.
+
+## canonical
+
+1. `SEOOverrides.canonical_url`
+2. Normalized route path (full URL normalization pipeline)
+
+## robots
+
+1. `SEOOverrides.robots`
+2. Entity-derived default:
+   - `entity_type == "search"` → `config.search_robots` (default `noindex,follow`)
+   - `entity.status == "published"` → `index,follow`
+   - otherwise → `config.default_robots` (default `index,follow`)
+
+## Open Graph
+
+| Field | Chain |
+|---|---|
+| `og:title` | `SEOOverrides.og_title` > resolved title |
+| `og:description` | `SEOOverrides.og_description` > resolved description |
+| `og:image` | `SEOOverrides.og_image` > `SEOEntity.featured_image` > `SEOConfig.default_og_image` |
+
+The resolved image cascades to `twitter:image`.
+
+## Twitter
+
+| Field | Chain |
+|---|---|
+| `twitter:card` | `SEOOverrides.twitter_card` > `"summary_large_image"` |
+| `twitter:title` | `SEOOverrides.twitter_title` > resolved `og:title` |
+| `twitter:description` | `SEOOverrides.twitter_description` > resolved `og:description` |
+| `twitter:image` | `SEOOverrides.twitter_image` > resolved `og:image` |
+
+## schema_jsonld
+
+1. `SEOOverrides.omit_schema` → `None`
+2. `SEOOverrides.schema_jsonld` (normalized to a list when needed)
+3. **`SchemaRegistry` generator** matching the resolved `@type` (Python/JS)
+4. Auto-generated schema (when `config.auto_generate_schema`)
+
+Breadcrumbs from `entity.breadcrumbs` are always appended as a
+`BreadcrumbList`, and hooks run last over the assembled payload.
+
+## Summary table
+
+| Field | Chain |
+|---|---|
+| title | Override > Entity > `"Untitled"` + template |
+| description | Override > Excerpt > Body snippet > `""` |
+| canonical | Override > Normalized route |
+| robots | Override > Entity status default |
+| og:title | Override > Resolved title |
+| og:description | Override > Resolved description |
+| og:image | Override > Entity image > Config default |
+| twitter:card | Override > `"summary_large_image"` |
+| twitter:image | Override > resolved og:image |
+| schema_jsonld | Override > Registry > auto-generated + breadcrumbs |
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/concepts/
+========================================================================
+
+# Concepts { #concepts }
+
+This track explains how easeo is put together and why. Read it once and the
+API becomes predictable: there are no hidden states, no environment reads, and
+no surprises in the output.
+
+## Pages { #pages }
+
+* [Determinism](determinism.md#determinism): the core guarantee and what it
+  enables.
+* [Entity Model](entity-model.md#entity-model): what a content entity is and
+  which fields feed which output.
+* [Payload Model](payload-model.md#payload-model): the shape of the output and
+  the exact tag order.
+* [Fallback Chains](fallback-chains.md#fallback-chains): how every field
+  resolves.
+* [URL Normalization](url-normalization.md#url-normalization): the canonical
+  URL pipeline.
+* [JSON-LD Schemas](schemas.md#schemas): the built-in schema types and how to
+  extend them.
+* [Validation](validation.md#validation): the built-in best-practice checks.
+
+## The one-sentence model { #model }
+
+`build_seo_payload` is a pure function:
+
+```text
+SEOEntity + route + SEOConfig (+ SEOOverrides) -> SEOPayload
+```
+
+Everything else in easeo is either a value type that feeds that function or a
+convenience wrapper around it.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/concepts/payload-model/
+========================================================================
+
+# Payload Model { #payload-model }
+
+An `SEOPayload` is the single output of `build_seo_payload`. It is structured,
+hashable, renderable, and serializable.
+
+## Structure { #structure }
+
+| Field | Type | Description |
+|---|---|---|
+| `title` | `str` | Resolved title, after the template |
+| `description` | `str` | Resolved description |
+| `canonical` | `str` | Fully normalized canonical URL |
+| `robots` | `str` | Robots meta content |
+| `og` / `openGraph` | `OGPayload` | Open Graph fields |
+| `twitter` | `TwitterPayload` | Twitter Card fields |
+| `schema_jsonld` / `schemaJsonLd` | `dict \| list \| None` | JSON-LD |
+
+## Methods { #methods }
+
+| Purpose | Python | JavaScript |
+|---|---|---|
+| Full head | `render_html()` | `renderHtml()` |
+| Open Graph only | `render_opengraph()` | `renderOpengraph()` |
+| Twitter only | `render_twitter()` | `renderTwitter()` |
+| JSON-LD only | `render_jsonld()` | `renderJsonld()` |
+| Canonical dict | `to_dict()` | `toDict()` |
+| CamelCase object | - | `toObject()` |
+| JSON string | `to_json()` | `toJSONString()` / `toString()` |
+| Hash | `hash()` | `hash()` |
+| ETag | `etag()` | `etag()` |
+
+## Dict access { #dict-access }
+
+Python payloads are dict-compatible, which makes them easy to drop into
+templates and tests:
+
+```python
+payload["title"]
+payload.get("title", "fallback")
+"title" in payload
+list(payload)
+len(payload)
+payload == payload.to_dict()
+```
+
+JavaScript payloads expose the equivalents:
+
+```js
+payload.get("title");
+payload.has("title");
+payload.equals(other);
+```
+
+## The camelCase view { #camelcase }
+
+In JavaScript, `toObject()` returns camelCase keys (`openGraph`,
+`schemaJsonLd`) and is what `JSON.stringify` uses. `toDict()` and
+`toJSONString()` return the canonical snake_case wire format shared with
+Python, Rust, and the published JSON schemas.
+
+```js
+JSON.stringify(payload);
+// {"title":...,"openGraph":{...},"schemaJsonLd":{...}}
+
+payload.toDict();
+// {"title":...,"og":{...},"schema_jsonld":{...}}
+```
+
+## Render order { #render-order }
+
+`render_html()` emits tags in a fixed order:
+
+1. `<title>`
+2. `<meta name="description">` when a description exists
+3. `<link rel="canonical">`
+4. `<meta name="robots">`
+5. Open Graph tags
+6. Twitter Card tags
+7. JSON-LD `<script>` when a schema exists
+
+Fixed order keeps output diffable and snapshot-friendly.
+
+## Escaping { #escaping }
+
+Text fields are HTML-escaped. The JSON-LD script escapes `<` so a value
+containing a closing script tag cannot break out of the block. Both are done
+in the Rust core, so Python and JavaScript behave identically. Framework
+integrations that inject the payload into a page rely on this.
+
+## Extras and hooks { #extras }
+
+A hook can add top-level fields to the payload. Those extras are preserved
+through `hash()`, `render_html()`, and serialization, and appear as enumerable
+properties alongside the standard fields.
+
+## Recap { #recap }
+
+* The payload has seven standard fields and a small method surface.
+* Dict access and equality make it test-friendly.
+* Rendering order and escaping are fixed and cross-language.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/concepts/schemas/
+========================================================================
+
+# JSON-LD Schemas { #schemas }
+
+easeo generates schema.org JSON-LD from the entity type, then lets you replace
+or extend it. The result is exposed as `schema_jsonld` (Python) or
+`schemaJsonLd` (JavaScript).
+
+## Built-in schemas { #built-in }
+
+| Schema | Built from | Key fields |
+|---|---|---|
+| `Article` | `post`, `video` | headline, dates, author, publisher |
+| `WebPage` | `home`, `page` | name, url, description |
+| `VideoObject` | `video` | name, url, description |
+| `CollectionPage` | `taxonomy` | name, url |
+| `SearchResultsPage` | `search` | name, url |
+| `Product` | `product` | sku, offers (price, currency, availability) |
+| `Organization` | `organization` | name, url, `sameAs` |
+| `LocalBusiness` | `local_business` | name, address, url |
+| `FAQPage` | `faq` | `mainEntity` question/answer pairs |
+| `BreadcrumbList` | any, when breadcrumbs exist | `itemListElement` |
+
+Breadcrumbs are always appended as a `BreadcrumbList`. When a page has both a
+main schema and breadcrumbs, `schema_jsonld` becomes a list of two objects.
+
+## Three ways to control it { #control }
+
+### Auto-generate { #auto }
+
+Leave `auto_generate_schema` at its default of `True`:
+
+```python
+config = SEOConfig(
+    canonical_host="example.com",
+    public_base_url="https://example.com",
+    auto_generate_schema=True,
+)
+```
+
+### Replace for one page { #override }
+
+Use `SEOOverrides` when a single page needs a different shape:
+
+```python
+from easeo import SEOOverrides, build_seo_payload
+
+payload = build_seo_payload(
+    entity,
+    "/podcast/ep-1",
+    config,
+    SEOOverrides(schema_jsonld={
+        "@context": "https://schema.org",
+        "@type": "PodcastEpisode",
+        "name": "Episode 1",
+    }),
+)
+```
+
+### Register a generator for a type { #registry }
+
+When every page of a given schema type should use the same shape, register a
+generator once on the config:
+
+```python
+from easeo import SchemaRegistry
+
+registry = SchemaRegistry()
+
+@registry.register("Article")
+def podcast_episode(entity, config, canonical, title, description, og_image):
+    return {
+        "@context": "https://schema.org",
+        "@type": "PodcastEpisode",
+        "name": title,
+        "url": canonical,
+    }
+
+config = SEOConfig(..., schema_registry=registry)
+```
+
+The generator runs whenever the resolved `@type` matches. Return `None` to
+fall back to the built-in schema for that page.
+
+## Suppressing the schema { #omit }
+
+```python
+overrides = SEOOverrides(omit_schema=True)
+```
+
+## Recap { #recap }
+
+* Schemas are generated from the entity type.
+* Breadcrumbs are appended automatically.
+* Replace per page with `SEOOverrides`, or per type with `SchemaRegistry`.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/concepts/url-normalization/
+========================================================================
+
+# URL Normalization { #url-normalization }
+
+Canonical URLs are built in the Rust core, not in your framework. This keeps
+one source of truth: no adapter re-implements trailing slash logic, and Python
+and JavaScript agree byte for byte.
+
+## The pipeline { #pipeline }
+
+`normalize_public_url` runs these steps:
+
+1. Parse the input URL or path.
+2. Extract the base path from `public_base_url`.
+3. Prepend the base path when it is not already present.
+4. Normalize the path (see below).
+5. Filter query parameters: strip tracking, keep the allowlist.
+6. Build `scheme://canonical_host/normalized_path?filtered_query`.
+
+## Path rules { #path-rules }
+
+Controlled by `URLPolicy`:
+
+| Rule | Default | Effect |
+|---|---|---|
+| Ensure leading slash | always | `/blog` and `blog` both become `/blog` |
+| Collapse duplicate slashes | `True` | `/a//b` becomes `/a/b` |
+| Lowercase | `True` | `/Blog/Post` becomes `/blog/post` |
+| Trailing slash | `"never"` | `/blog/` becomes `/blog`; use `"always"` or `"preserve"` to change |
+| Enforce HTTPS | `True` | `http://` becomes `https://` |
+
+## Query filtering { #query }
+
+Tracking parameters are stripped using the absorbed detrack engine. When
+`allowed_query_params` is non-empty, only those parameters survive.
+
+=== "Python"
+
+    ```python
+    from easeo import SEOConfig, URLPolicy, SEOEntity, build_seo_payload
+
+    config = SEOConfig(
+        canonical_host="example.com",
+        public_base_url="https://example.com",
+        url_policy=URLPolicy(allowed_query_params=["page", "q"]),
+    )
+
+    payload = build_seo_payload(
+        SEOEntity(entity_type="search", title="Search"),
+        "/search?q=headphones&utm_source=ad&ref=x",
+        config,
+    )
+
+    print(payload.canonical)
+    # "https://example.com/search?q=headphones"
+    ```
+
+`utm_source` and `ref` are stripped; `q` is kept.
+
+## Host validation { #host }
+
+`canonical_host` must be host-only. These all fail with `ConfigurationError`:
+
+```text
+https://example.com     (scheme)
+example.com/path        (path)
+example.com:8080        (port)
+example.com/#frag       (fragment)
+example.com.            (trailing dot)
+```
+
+## Sub-path deployments { #subpath }
+
+If `public_base_url` includes a path, that path is used as the base:
+
+```python
+config = SEOConfig(
+    canonical_host="example.com",
+    public_base_url="https://example.com/blog/",
+)
+
+payload = build_seo_payload(entity, "/post", config)
+print(payload.canonical)
+# "https://example.com/blog/post"
+```
+
+## Raw helpers { #helpers }
+
+| Python | JavaScript | Purpose |
+|---|---|---|
+| `normalize_path(path, policy)` | `normalizePath(path, options)` | Normalize a path only |
+| `normalize_public_url(url, config)` | `normalizePublicUrl(url, config)` | Build a canonical URL |
+| `clean_url(url)` | `cleanUrl(url)` | Remove tracking params, return a report |
+| `clean_query(query)` | `cleanQuery(query)` | Clean a query string |
+
+## Recap { #recap }
+
+* Normalization lives in the core and is shared by every language.
+* `URLPolicy` controls path rules; the allowlist controls query params.
+* `canonical_host` is validated to be host-only.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/concepts/validation/
+========================================================================
+
+# Validation { #validation }
+
+`validate_payload` checks a built payload against SEO best practices and
+returns a list of issues. It never throws on ordinary content; it reports.
+
+## Running it { #running }
+
+=== "Python"
+
+    ```python
+    from easeo import build_seo_payload, validate_payload
+
+    payload = build_seo_payload(entity, "/blog/post", config)
+
+    for issue in validate_payload(payload):
+        print(issue.rule_id, issue.severity, issue.message)
+    ```
+
+=== "JavaScript"
+
+    ```js
+    const { buildSeoPayload, validatePayload } = require("@easeo/core");
+
+    const payload = buildSeoPayload(entity, "/blog/post", config);
+
+    for (const issue of validatePayload(payload)) {
+      console.log(issue.ruleId, issue.severity, issue.message);
+    }
+    ```
+
+## Issue shape { #shape }
+
+| Field | Type | Description |
+|---|---|---|
+| `rule_id` / `ruleId` | `str` | Stable rule identifier, e.g. `EASEO101` |
+| `severity` | `str` | `error`, `warning`, or `info` |
+| `message` | `str` | Human-readable explanation |
+| `url` | `str \| None` | Canonical URL the issue belongs to |
+| `details` | `dict` | Rule-specific data |
+
+## Rules { #rules }
+
+| Rule | Severity | Checks |
+|---|---|---|
+| `EASEO101` | warning | Title length outside the recommended range |
+| `EASEO102` | warning | Description length outside the recommended range |
+| `EASEO103` | error | Canonical URL is not absolute, or uses a non-HTTP scheme |
+| `EASEO104` | warning | Open Graph image is missing |
+| `EASEO105` | warning | Open Graph image URL is not absolute |
+| `EASEO106` | warning | Robots directive is malformed |
+| `EASEO107` | info | No JSON-LD schema was generated |
+
+## Emitting warnings automatically { #emit }
+
+Set `emit_warnings=True` on the config and easeo emits Python warnings during
+`build_seo_payload`, so you can see issues without a second call:
+
+```python
+config = SEOConfig(
+    canonical_host="example.com",
+    public_base_url="https://example.com",
+    emit_warnings=True,
+)
+```
+
+## Validation in CI { #ci }
+
+For build-time enforcement, prefer an SEO contract. Contracts describe intent
+per route and fail the build on any violation. See
+[Contracts in CI](../guides/contracts-in-ci.md).
+
+## Recap { #recap }
+
+* `validate_payload` reports best-practice issues.
+* Issues carry a stable rule id, severity, and details.
+* `emit_warnings=True` surfaces them during the build.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/examples/
+========================================================================
+
+# Examples { #examples }
+
+Short, self-contained programs. Each one builds a payload and prints the
+generated HTML.
+
+## Python { #python }
+
+```python
+from easeo import SEOConfig, SEOEntity, build_seo_payload
+
+config = SEOConfig(
+    canonical_host="example.com",
+    public_base_url="https://example.com",
+)
+
+entity = SEOEntity(
+    entity_type="post",
+    title="Hello World",
+    excerpt="An example post.",
+)
+
+payload = build_seo_payload(entity, "/blog/hello", config)
+print(payload.render_html())
+```
+
+## JavaScript { #javascript }
+
+```js
+const { buildSeoPayload } = require("@easeo/core");
+
+const payload = buildSeoPayload(
+  { entityType: "post", title: "Hello World", description: "An example post." },
+  "/blog/hello",
+  { canonicalHost: "example.com", publicBaseUrl: "https://example.com" }
+);
+
+console.log(payload.renderHtml());
+```
+
+## Rust { #rust }
+
+```rust
+use easeo_core::{SEOConfig, SEOEntity, EntityType, build_seo_payload};
+
+let config = SEOConfig {
+    canonical_host: "example.com".into(),
+    public_base_url: "https://example.com".into(),
+    ..Default::default()
+};
+
+let entity = SEOEntity {
+    entity_type: EntityType::Post,
+    title: Some("Hello World".into()),
+    excerpt: Some("An example post.".into()),
+    ..Default::default()
+};
+
+let payload = build_seo_payload(&entity, "/blog/hello", &config)?;
+println!("{}", payload.render_html()?);
+```
+
+## Runnable files { #files }
+
+The repository ships runnable copies under `examples/`:
+
+```text
+examples/
+├── python_basic.py
+└── node_basic.mjs
+```
+
+```bash
+python examples/python_basic.py
+node examples/node_basic.mjs
+```
+
+## Determinism demo { #determinism }
+
+```python
+from easeo import SEOConfig, SEOEntity, build_seo_payload
+
+config = SEOConfig(canonical_host="example.com", public_base_url="https://example.com")
+entity = SEOEntity(entity_type="page", title="Stable")
+
+a = build_seo_payload(entity, "/x", config)
+b = build_seo_payload(entity, "/x", config)
+
+assert a == b
+assert a.hash() == b.hash()
+print("stable:", a.etag())
+```
+
+## Contract demo { #contract }
+
+```python
+from easeo import SEOContractConfig, SEOExpectation, build_seo_contract
+
+contract = build_seo_contract(
+    SEOContractConfig(
+        canonical_host="example.com",
+        scheme="https",
+        defaults=SEOExpectation(og_required=True, schema_required=True),
+    )
+)
+
+print(contract.to_json())
+```
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/guides/contracts-in-ci/
+========================================================================
+
+# Contracts in CI { #contracts-in-ci }
+
+An SEO contract turns intent into a committed artifact. You generate it once,
+commit it, and validate your build against it. When SEO drifts, CI fails.
+
+## The workflow { #workflow }
+
+1. Define the contract in code.
+2. Write it to `.easeo/contract.json` and commit the file.
+3. In CI, regenerate and diff, or validate generated payloads against it.
+
+## Define and emit { #emit }
+
+=== "Python"
+
+    ```python
+    # scripts/write_contract.py
+    from easeo import (
+        SEOContractConfig,
+        SEOContractRule,
+        SEOExpectation,
+        build_seo_contract,
+    )
+
+    contract = build_seo_contract(
+        SEOContractConfig(
+            canonical_host="example.com",
+            scheme="https",
+            defaults=SEOExpectation(
+                title=SEOExpectation(min_length=20, max_length=60),
+                description=SEOExpectation(min_length=70, max_length=160),
+                og_required=True,
+                schema_required=True,
+            ),
+            rules=[
+                SEOContractRule(match="/blog/*", expect=SEOExpectation(schema_types=["Article"])),
+                SEOContractRule(match="/search", expect=SEOExpectation(indexable=False)),
+            ],
+        )
+    )
+
+    contract.write(".easeo/contract.json")
+    ```
+
+=== "Astro"
+
+    The Astro integration emits the contract automatically when you pass a
+    `contract` option:
+
+    ```js
+    // astro.config.mjs
+    import easeo from "@easeo/astro";
+
+    export default defineConfig({
+      integrations: [
+        easeo({
+          config: { canonicalHost: "example.com", publicBaseUrl: "https://example.com" },
+          contract: { canonicalHost: "example.com", scheme: "https" },
+        }),
+      ],
+    });
+    ```
+
+    The file is written to `<outDir>/.easeo/contract.json` after the build.
+
+## Validate in CI { #validate }
+
+A compact pipeline step that regenerates the contract and fails on drift:
+
+```yaml
+# .github/workflows/seo.yml
+name: SEO
+on: [push, pull_request]
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install easeo
+      - name: Regenerate the contract
+        run: python scripts/write_contract.py
+      - name: Fail on drift
+        run: git diff --exit-code .easeo/contract.json
+```
+
+If the contract changes, the diff is printed and the step fails, so a reviewer
+sees exactly what changed.
+
+## Asserting payloads { #assert }
+
+Contracts are the site-wide gate; unit tests catch per-page regressions.
+Because payloads are deterministic and comparable, a snapshot test is one
+line:
+
+```python
+def test_blog_post_seo():
+    payload = build_seo_payload(blog_entity, "/blog/post", config)
+    assert payload == expected_payload  # committed fixture
+```
+
+## Recap { #recap }
+
+* Emit the contract to `.easeo/contract.json` and commit it.
+* Regenerate and `git diff --exit-code` in CI to catch drift.
+* Snapshot individual payloads with `assert payload == fixture`.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/guides/custom-schemas/
+========================================================================
+
+# Custom JSON-LD { #custom-jsonld }
+
+There are two ways to control structured data with easeo: per-page overrides
+and registered generators. This guide shows when to use each.
+
+## Per-page override { #override }
+
+Use `SEOOverrides` when a single page needs a different schema:
+
+=== "Python"
+
+    ```python
+    from easeo import SEOOverrides, build_seo_payload
+
+    payload = build_seo_payload(
+        entity,
+        "/podcast/ep-1",
+        config,
+        SEOOverrides(schema_jsonld={
+            "@context": "https://schema.org",
+            "@type": "PodcastEpisode",
+            "name": "Episode 1",
+            "url": "https://example.com/podcast/ep-1",
+        }),
+    )
+    ```
+
+=== "JavaScript"
+
+    ```js
+    const { buildSeoPayload } = require("@easeo/core");
+
+    const payload = buildSeoPayload(entity, "/podcast/ep-1", config, {
+      schemaJsonLd: {
+        "@context": "https://schema.org",
+        "@type": "PodcastEpisode",
+        name: "Episode 1",
+      },
+    });
+    ```
+
+Overrides win over every other source and can be a single object or a list of
+objects.
+
+## Registered generator { #registry }
+
+When every page of a given schema type should use the same shape, register a
+generator once on the config:
+
+=== "Python"
+
+    ```python
+    from easeo import SEOConfig, SchemaRegistry
+
+    registry = SchemaRegistry()
+
+    @registry.register("Article")
+    def podcast_episode(entity, config, canonical, title, description, og_image):
+        return {
+            "@context": "https://schema.org",
+            "@type": "PodcastEpisode",
+            "name": title,
+            "url": canonical,
+            "description": description,
+        }
+
+    config = SEOConfig(
+        canonical_host="example.com",
+        public_base_url="https://example.com",
+        schema_registry=registry,
+    )
+    ```
+
+=== "JavaScript"
+
+    ```js
+    const { SchemaRegistry } = require("@easeo/core");
+
+    const registry = new SchemaRegistry();
+
+    registry.register("Article", (entity, config, canonical, title) => ({
+      "@context": "https://schema.org",
+      "@type": "PodcastEpisode",
+      name: title,
+      url: canonical,
+    }));
+
+    const config = {
+      canonicalHost: "example.com",
+      publicBaseUrl: "https://example.com",
+      schemaRegistry: registry,
+    };
+    ```
+
+The generator receives `(entity, config, canonical, title, description,
+og_image)` and returns a dict. Return `None` to fall back to the built-in
+schema.
+
+### Managing generators { #manage }
+
+| Python | JavaScript | Purpose |
+|---|---|---|
+| `register` | `register` | Add or replace a generator |
+| `unregister` | `unregister` | Remove a generator |
+| `get` | `get` | Look up a generator |
+| `has` | `has` | Check whether one is registered |
+| `list_types` | `listTypes` | List registered type names |
+
+## Site-wide injection with a hook { #hooks }
+
+To add an `Organization` schema to every page, use a hook:
+
+```python
+from easeo import HookRegistry
+
+hooks = HookRegistry()
+
+@hooks.hook("post_process")
+def inject_organization(payload, entity, config):
+    org = {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": config.publisher_name or "Example",
+        "url": config.public_base_url,
+    }
+    existing = payload.get("schema_jsonld")
+    if isinstance(existing, list):
+        payload["schema_jsonld"] = [org, *existing]
+    elif existing is not None:
+        payload["schema_jsonld"] = [org, existing]
+    else:
+        payload["schema_jsonld"] = org
+    return payload
+
+config = SEOConfig(..., hooks=hooks)
+```
+
+## Precedence { #precedence }
+
+1. `omit_schema` produces `None`.
+2. `SEOOverrides.schema_jsonld`.
+3. A registered generator matching the resolved `@type`.
+4. The auto-generated schema.
+
+Breadcrumbs are appended in every case, and hooks run last.
+
+## Recap { #recap }
+
+* Use `SEOOverrides` for one page.
+* Use `SchemaRegistry` for a whole schema type.
+* Use a hook to inject fields into every payload.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/guides/framework-recipes/
+========================================================================
+
+# Framework Recipes { #framework-recipes }
+
+Short, copy-paste patterns for wiring easeo into a framework. For full details
+per integration, see the [Integrations](../integrations/index.md) track.
+
+## Next.js { #next }
+
+```tsx
+// app/products/[slug]/page.tsx
+import { easeoMetadata } from "@easeo/next";
+
+export async function generateMetadata({ params }) {
+  const product = await getProduct(params.slug);
+  return easeoMetadata({
+    entity: {
+      entityType: "product",
+      title: product.name,
+      description: product.description,
+    },
+    route: `/products/${product.slug}`,
+    config: { canonicalHost: "example.com", publicBaseUrl: "https://example.com" },
+  });
+}
+```
+
+`easeoMetadata` returns a native Next.js `Metadata` object.
+
+## Astro { #astro }
+
+```js
+// astro.config.mjs
+import easeo from "@easeo/astro";
+
+export default defineConfig({
+  integrations: [
+    easeo({
+      config: { canonicalHost: "example.com", publicBaseUrl: "https://example.com" },
+      contract: { canonicalHost: "example.com", scheme: "https" },
+    }),
+  ],
+});
+```
+
+## Vite { #vite }
+
+```js
+// vite.config.mjs
+import easeo from "@easeo/vite";
+
+export default defineConfig({
+  plugins: [
+    easeo({
+      config: { canonicalHost: "example.com", publicBaseUrl: "https://example.com" },
+    }),
+  ],
+});
+```
+
+## Nuxt { #nuxt }
+
+```ts
+import { useEaseoSeo } from "@easeo/nuxt";
+
+useEaseoSeo({
+  entity: { entityType: "post", title: article.title, description: article.description },
+  route: `/blog/${article.slug}`,
+  config: { canonicalHost: "example.com", publicBaseUrl: "https://example.com" },
+});
+```
+
+## SvelteKit { #sveltekit }
+
+```svelte
+<script>
+  import { buildEaseoPayload, EaseoHead } from "@easeo/sveltekit";
+  import { page } from "$app/stores";
+
+  const seo = buildEaseoPayload(
+    { entityType: "post", title: "Hello", description: "A post" },
+    $page.url.pathname,
+    { canonicalHost: "example.com", publicBaseUrl: "https://example.com" }
+  );
+</script>
+
+<EaseoHead {seo} />
+```
+
+## React { #react }
+
+```tsx
+import { EaseoHead } from "@easeo/react";
+
+<EaseoHead
+  entity={{ entityType: "product", title: product.name }}
+  route={`/products/${product.slug}`}
+  config={{ canonicalHost: "example.com", publicBaseUrl: "https://example.com" }}
+/>
+```
+
+The component renders nothing; it keeps `document.head` in sync on the client.
+For SSR, put `payload.renderHtml()` into your template.
+
+## FastAPI { #fastapi }
+
+```python
+from easeo.adapters.fastapi import EaseoSEO
+
+seo = EaseoSEO(config)
+
+@app.get("/products/{slug}")
+def product(slug: str):
+    return seo.for_entity(product, f"/products/{slug}")
+```
+
+## Flask { #flask }
+
+```python
+from easeo.adapters.flask import Easeo
+
+easeo = Easeo(app, config)
+```
+
+Then in a template: `{% raw %}{{ easeo_head(entity, request.path) }}{% endraw %}`.
+
+## Django { #django }
+
+```python
+# settings.py
+EASEO = {
+    "canonical_host": "example.com",
+    "public_base_url": "https://example.com",
+    "site_name": "Example",
+}
+```
+
+```django
+{% load easeo_tags %}
+<head>
+  {% easeo_head entity request.path %}
+</head>
+```
+
+## Recap { #recap }
+
+* Every JS integration supports default and named imports.
+* Python adapters are lazy and installed as extras.
+* Route and config are the two inputs every adapter needs.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/guides/hooks/
+========================================================================
+
+# Hooks { #hooks }
+
+Hooks post-process the payload after it is built. Use them to add a field to
+every page, rewrite a description per section, or inject site-wide metadata.
+
+Hooks are **config-scoped**. They live on the `SEOConfig` that carries them,
+so `build_seo_payload` stays a pure function of its inputs and two configs in
+the same process cannot interfere.
+
+## Registering a hook { #register }
+
+=== "Python"
+
+    ```python
+    from easeo import HookRegistry, SEOConfig
+
+    hooks = HookRegistry()
+
+    @hooks.hook("post_process")
+    def add_generator(payload, entity, config):
+        payload["generator"] = "easeo"
+        return payload
+
+    config = SEOConfig(
+        canonical_host="example.com",
+        public_base_url="https://example.com",
+        hooks=hooks,
+    )
+    ```
+
+=== "JavaScript"
+
+    ```js
+    const { HookRegistry } = require("@easeo/core");
+
+    const hooks = new HookRegistry();
+
+    hooks.register("post_process", (payload, entity, config) => {
+      payload.generator = "easeo";
+      return payload;
+    });
+
+    const config = {
+      canonicalHost: "example.com",
+      publicBaseUrl: "https://example.com",
+      hooks,
+    };
+    ```
+
+## The hook signature { #signature }
+
+A hook receives three arguments and must return the payload:
+
+```text
+hook(payload, entity, config) -> payload
+```
+
+* `payload` is a plain dict in the canonical snake_case format, including the
+  changes made by previous hooks.
+* `entity` is the original `SEOEntity`.
+* `config` is the `SEOConfig` that carried the hook.
+
+## Hook points { #points }
+
+| Name | When it runs |
+|---|---|
+| `post_process` | At the end of the build, before returning |
+
+`post_process` is the only built-in hook point.
+
+## Order and scoping { #order }
+
+Hooks run in registration order; the last writer of a field wins. Because the
+registry is part of the config, hooks are scoped: a config without hooks is
+unaffected.
+
+=== "Python"
+
+    ```python
+    hooks_a = HookRegistry()
+    hooks_a.register("post_process", lambda p, e, c: {**p, "site": "A"})
+
+    hooks_b = HookRegistry()
+    hooks_b.register("post_process", lambda p, e, c: {**p, "site": "B"})
+
+    a = build_seo_payload(entity, "/x", config_a)  # config_a has hooks_a
+    b = build_seo_payload(entity, "/x", config_b)  # config_b has hooks_b
+    assert a["site"] == "A"
+    assert b["site"] == "B"
+    ```
+
+## Managing hooks { #manage }
+
+| Python | JavaScript | Purpose |
+|---|---|---|
+| `register` | `register` | Add a hook |
+| `hook` | `hook` | Decorator form |
+| `unregister` | `unregister` | Remove a hook |
+| `run` | `run` | Run all hooks for a name |
+| `clear` | `clear` | Remove all hooks, or those under a name |
+| `get_registered` | `size` | Inspect the registry |
+
+## Determinism and purity { #purity }
+
+Keep hooks pure: no clock reads, no random values, no network calls. A hook
+that reads the environment breaks the determinism guarantee for the config
+that carries it.
+
+If a hook raises, the exception propagates and the remaining hooks are
+skipped. Errors should be loud; a failing hook is a bug.
+
+## Recap { #recap }
+
+* Hooks post-process the payload and return it.
+* They are config-scoped, ordered, and deterministic when kept pure.
+* Use `SEOOverrides` for per-page changes and hooks for site-wide ones.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/guides/
+========================================================================
+
+# Guides { #guides }
+
+Task-oriented walkthroughs for the things people do most with easeo.
+
+## Pages { #pages }
+
+* [Custom JSON-LD](custom-schemas.md#custom-jsonld): per-page overrides and
+  registered generators.
+* [Hooks](hooks.md#hooks): config-scoped post-processing.
+* [Contracts in CI](contracts-in-ci.md#contracts-in-ci): enforce SEO intent in
+  your pipeline.
+* [Framework Recipes](framework-recipes.md#framework-recipes): end-to-end
+  patterns per framework.
+* [Migration from seoslug](migration-from-seoslug.md#migration-from-seoslug):
+  the API mapping and what changed.
+
+## When to use which mechanism { #which }
+
+| Need | Use |
+|---|---|
+| Change one field on one page | `SEOOverrides` |
+| Same schema shape for a whole type | `SchemaRegistry` |
+| Add a field to every payload | `HookRegistry` |
+| Assert SEO in CI | SEO contract |
+| Fix a URL shape globally | `URLPolicy` |
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/guides/migration-from-seoslug/
+========================================================================
+
+# Migration from seoslug { #migration-from-seoslug }
+
+## Overview
+
+easeo is the Rust rewrite of seoslug. The core API is similar but the implementation is now Rust with Python and JavaScript bindings.
+
+## API Mapping
+
+| seoslug | easeo |
+|---------|-------|
+| `seoslug.SEOConfig` | `easeo.SEOConfig` |
+| `seoslug.SEOEntity` | `easeo.SEOEntity` |
+| `seoslug.build_seo_payload(entity, route, config, overrides=None)` | same signature |
+| `seoslug.build_seo_payload_dict()` | `easeo.build_seo_payload_dict()` |
+| `seoslug.build_seo_payload_async()` | `easeo.build_seo_payload_async()` |
+| `seoslug.URLPolicy` | `easeo.URLPolicy` |
+| `seoslug.SchemaRegistry` | `easeo.SchemaRegistry` (callables supported) |
+| `seoslug.hook` / `register_hook` | `easeo.HookRegistry` (config-scoped) |
+| `seoslug.factories` | `from_blog_post`, `from_product`, `from_faq` |
+| `seoslug.SEOError` | `easeo.EaseoError` |
+| `payload["title"]`, `payload == dict` | supported |
+
+## What Changed
+
+- Rust core instead of pure Python
+- Contract system added
+- detrack absorbed into core
+- **Hooks are config-scoped only.** seoslug had a global registry; easeo attaches
+  hooks to `SEOConfig` so the builder stays pure and deterministic.
+- **`SchemaRegistry.register()` accepts callables.** It is no longer Rust-only.
+- Framework adapters are separate packages
+
+## What Stays the Same
+
+- `build_seo_payload(entity, route, config, overrides=None)` signature
+- Deterministic output
+- Framework-agnostic core
+- `render_html()`, `to_dict()`, `hash()`, `etag()`
+- Schema registry
+- Dict-compatible, comparable payloads
+- `except ValueError` still catches easeo errors
+
+## Installation
+
+```bash
+# Old
+pip install seoslug
+
+# New
+pip install easeo
+```
+
+## Code Changes
+
+Minimal changes required:
+
+```python
+# Old
+from seoslug import SEOConfig, SEOEntity, build_seo_payload
+
+# New
+from easeo import SEOConfig, SEOEntity, build_seo_payload
+```
+
+The API is intentionally compatible.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/
+========================================================================
+
+<div align="center">
+  <h1 id="easeo-documentation">easeo documentation</h1>
+</div>
+
+`easeo` is a deterministic SEO metadata generator. It turns a content entity,
+a route path, and a site configuration into one structured payload: canonical
+URL, title, description, robots directives, Open Graph, Twitter Cards, and
+JSON-LD. The core is written in Rust and shipped to Python and
+JavaScript/TypeScript, so the same inputs produce byte-for-byte identical
+output in every language.
+
+```text
+content entity + route + config
+    |
+    v
+easeo (library)
+    |
+    v
+SEOPayload
+    |
+    +--> framework adapter --> <head>
+    |
+    +--> SEO contract --> validation
+```
+
+## What easeo is { #what-easeo-is }
+
+- A Rust workspace with three crates:
+  - [`easeo-core`](reference/rust-api.md): all the logic, with no I/O.
+  - `easeo-python`: PyO3 bindings.
+  - `easeo-node`: napi-rs bindings.
+- One primary function: `build_seo_payload(entity, route, config)`.
+- Pure and deterministic: no timestamps, no randomness, no environment reads.
+- Framework-agnostic: adapters for Next.js, Astro, Vite, Nuxt, SvelteKit,
+  React, FastAPI, Django, Flask, and Zensical.
+
+## Why easeo { #why-easeo }
+
+- **Deterministic output.** Same inputs, same bytes. Snapshot test it, hash
+  it, cache it forever, diff it across deployments.
+- **One implementation, three languages.** The Rust core guarantees that
+  Python and JavaScript agree, verified by cross-language conformance tests.
+- **Contract-first.** Encode your SEO intent as a machine-readable contract
+  and fail the build when it drifts.
+- **Zero ceremony.** One function call returns a payload that renders itself
+  to safe, ready-to-inject head HTML.
+
+## What easeo is not { #what-easeo-is-not }
+
+- **Not an SEO crawler.** It does not fetch your site.
+- **Not a score generator.** It does not grade content.
+- **Not a keyword tool.** It formats the data you give it.
+- **Not a browser automation framework.** It performs no I/O.
+- **Not an analytics platform.** It stores no state.
+
+## Quick start { #quick-start }
+
+=== "Python"
+
+    ```bash
+    pip install easeo
+    ```
+
+    ```python
+    from easeo import SEOConfig, SEOEntity, build_seo_payload
+
+    config = SEOConfig(
+        canonical_host="example.com",
+        public_base_url="https://example.com",
+        site_name="Example",
+    )
+
+    entity = SEOEntity(
+        entity_type="post",
+        title="Hello World",
+        excerpt="An example post.",
+    )
+
+    payload = build_seo_payload(entity, "/blog/hello", config)
+    print(payload.render_html())
+    ```
+
+=== "JavaScript"
+
+    ```bash
+    npm install @easeo/core
+    ```
+
+    ```js
+    const { buildSeoPayload } = require("@easeo/core");
+
+    const payload = buildSeoPayload(
+      { entityType: "post", title: "Hello World", description: "An example post." },
+      "/blog/hello",
+      { canonicalHost: "example.com", publicBaseUrl: "https://example.com" }
+    );
+
+    console.log(payload.renderHtml());
+    ```
+
+=== "Rust"
+
+    ```rust
+    use easeo_core::{SEOConfig, SEOEntity, EntityType, build_seo_payload};
+
+    let config = SEOConfig {
+        canonical_host: "example.com".into(),
+        public_base_url: "https://example.com".into(),
+        ..Default::default()
+    };
+
+    let entity = SEOEntity {
+        entity_type: EntityType::Post,
+        title: Some("Hello World".into()),
+        excerpt: Some("An example post.".into()),
+        ..Default::default()
+    };
+
+    let payload = build_seo_payload(&entity, "/blog/hello", &config)?;
+    assert_eq!(payload.canonical, "https://example.com/blog/hello");
+    ```
+
+## Guides { #guides }
+
+- [Tutorial](tutorial/index.md): install, first payload, fallbacks, rendering,
+  contracts, configuration.
+- [Concepts](concepts/index.md): determinism, the entity and payload models,
+  fallback chains, URL normalization, schemas, validation.
+- [Guides](guides/index.md): custom JSON-LD, hooks, contracts in CI, framework
+  recipes, migration.
+- [Reference](reference/python-api.md): Python, JavaScript, and Rust APIs.
+- [Integrations](integrations/index.md): per-framework setup.
+- [Recipes](recipes/index.md): real-world patterns.
+
+## Repository layout { #repository-layout }
+
+```text
+easeo/
+├── Cargo.toml                 # Rust workspace
+├── pyproject.toml             # maturin / Python package
+├── README.md
+├── LICENSE
+├── crates/
+│   ├── easeo-core/            # all logic
+│   ├── easeo-python/          # PyO3 bindings
+│   └── easeo-node/            # napi-rs bindings
+├── packages/core/             # @easeo/core wrapper
+├── integrations/              # JS framework integrations
+├── python/easeo/              # Python package and adapters
+├── tests/                     # Python, JavaScript, conformance
+└── docs/
+    └── (this directory)
+```
+
+## License { #license }
+
+MIT.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/integrations/astro/
+========================================================================
+
+# Astro { #astro }
+
+`@easeo/astro` is a build-time integration. It injects the site config into the
+Vite define map and, optionally, emits an SEO contract after the build.
+
+## Install { #install }
+
+```bash
+npm install @easeo/astro
+```
+
+## Usage { #usage }
+
+```js
+// astro.config.mjs
+import { defineConfig } from "astro/config";
+import easeo from "@easeo/astro";
+
+export default defineConfig({
+  integrations: [
+    easeo({
+      config: {
+        canonicalHost: "example.com",
+        publicBaseUrl: "https://example.com",
+      },
+      // Optional: write <outDir>/.easeo/contract.json after the build.
+      contract: { canonicalHost: "example.com", scheme: "https" },
+    }),
+  ],
+});
+```
+
+## Hooks it registers { #hooks }
+
+| Hook | Effect |
+|---|---|
+| `astro:config:setup` | Defines `__EASEO_CONFIG__` for use in components |
+| `astro:build:done` | Writes `.easeo/contract.json` when `contract` is set |
+
+## Emitting the contract { #contract }
+
+The contract is written to the build output directory:
+
+```text
+dist/
+└── .easeo/
+    └── contract.json
+```
+
+Commit it or upload it as a build artifact, then gate deployments on a diff.
+See [Contracts in CI](../guides/contracts-in-ci.md).
+
+## Notes { #notes }
+
+* The output directory is resolved with `fileURLToPath`, so paths with spaces
+  work correctly.
+* The contract file uses the canonical snake_case format that matches the
+  published JSON schema.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/integrations/django/
+========================================================================
+
+# Django { #django }
+
+The Django adapter provides template tags and a function API that read their
+config from Django settings.
+
+## Install { #install }
+
+```bash
+pip install "easeo[django]"
+```
+
+## Configure { #configure }
+
+```python
+# settings.py
+EASEO = {
+    "canonical_host": "example.com",
+    "public_base_url": "https://example.com",
+    "site_name": "Example",
+    "title_template": "{title} - Example",
+}
+```
+
+If `EASEO` is missing, the adapter warns and falls back to `localhost`.
+
+## Template tags { #tags }
+
+Register the library and call the tags:
+
+```django
+{% load easeo_tags %}
+<head>
+  {% easeo_head entity request.path %}
+</head>
+```
+
+| Tag | Output |
+|---|---|
+| `{% easeo_head entity route %}` | Full `<head>` block |
+| `{% easeo_title entity %}` | Just the `<title>` tag |
+| `{% easeo_meta entity %}` | Just the meta description |
+
+`easeo_title` and `easeo_meta` read the route from the request in the template
+context.
+
+## Function API { #function }
+
+```python
+from easeo.adapters.django import seo_head, easeo_title, easeo_meta
+
+html = seo_head(entity, "/blog/post")
+```
+
+Pass an explicit config as the third argument to bypass settings:
+
+```python
+from easeo import SEOConfig
+
+html = seo_head(entity, "/blog/post", SEOConfig(...))
+```
+
+## Notes { #notes }
+
+* Output is marked safe because the payload escapes its values.
+* Entities need `entity_type`, `title`, and `description`; missing
+  `entity_type` defaults to `page`.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/integrations/fastapi/
+========================================================================
+
+# FastAPI { #fastapi }
+
+The FastAPI adapter wraps an `SEOConfig` and builds payloads per route.
+
+## Install { #install }
+
+```bash
+pip install "easeo[fastapi]"
+```
+
+## Usage { #usage }
+
+```python
+from fastapi import FastAPI
+from easeo import SEOConfig
+from easeo.adapters.fastapi import EaseoSEO
+
+app = FastAPI()
+
+seo = EaseoSEO(
+    SEOConfig(
+        canonical_host="example.com",
+        public_base_url="https://example.com",
+    )
+)
+
+@app.get("/products/{slug}")
+def product(slug: str):
+    return seo.for_entity(product, f"/products/{slug}")
+```
+
+`for_entity(entity, route)` returns a plain dict, ready for a JSON response or
+a template.
+
+## Async endpoints { #async }
+
+The payload build is fast and releases the GIL. If you build many payloads in a
+request, or want to keep the event loop free, use the async builder:
+
+```python
+from easeo import build_seo_payload_async
+
+@app.get("/products/{slug}")
+async def product(slug: str):
+    return (await build_seo_payload_async(product, f"/products/{slug}", config)).to_dict()
+```
+
+## Notes { #notes }
+
+* `EaseoSEO(None)` raises `ValueError`; a config is required.
+* `for_entity` accepts any object with `entity_type`, `title`, and
+  `description` or `excerpt` attributes. Missing `entity_type` defaults to
+  `page`.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/integrations/flask/
+========================================================================
+
+# Flask { #flask }
+
+The Flask adapter registers a context processor and exposes a `for_entity`
+helper.
+
+## Install { #install }
+
+```bash
+pip install "easeo[flask]"
+```
+
+## Usage { #usage }
+
+```python
+from flask import Flask
+from easeo import SEOConfig
+from easeo.adapters.flask import Easeo
+
+app = Flask(__name__)
+
+easeo = Easeo(
+    app,
+    SEOConfig(
+        canonical_host="example.com",
+        public_base_url="https://example.com",
+    )
+)
+```
+
+## Templates { #templates }
+
+The adapter registers a `seo_head(entity, route)` helper:
+
+```jinja
+<head>
+  {{ easeo_head(entity, request.path) | safe }}
+</head>
+```
+
+The return value is `Markup`, so the `| safe` filter is optional.
+
+## Direct use { #direct }
+
+```python
+payload = easeo.for_entity(entity, "/blog/post")
+# returns a plain dict
+```
+
+## Deferred init { #deferred }
+
+For application factories, construct without an app and initialize later:
+
+```python
+easeo = Easeo(config=config)
+easeo.init_app(app)
+```
+
+`init_app` without a config raises `ValueError`.
+
+## Notes { #notes }
+
+* `for_entity` returns a dict; the template helper returns HTML.
+* Entities need `entity_type`, `title`, and `description`; missing
+  `entity_type` defaults to `page`.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/integrations/
+========================================================================
+
+# Integrations { #integrations }
+
+easeo ships adapters for the most common frameworks. They are thin: each one
+calls `build_seo_payload` and hands the result to the framework's native
+metadata mechanism.
+
+## JavaScript / TypeScript { #javascript }
+
+| Framework | Package | Entry point |
+|---|---|---|
+| [Next.js](next.md#nextjs) | `@easeo/next` | `easeoMetadata()` |
+| [Astro](astro.md#astro) | `@easeo/astro` | build integration plus contract emission |
+| [Vite](vite.md#vite) | `@easeo/vite` | `transformIndexHtml` plugin |
+| [Nuxt](nuxt.md#nuxt) | `@easeo/nuxt` | `useEaseoSeo()` composable |
+| [SvelteKit](sveltekit.md#sveltekit) | `@easeo/sveltekit` | `buildEaseoPayload()` plus `<EaseoHead />` |
+| [React](react.md#react) | `@easeo/react` | `<EaseoHead />` component |
+
+All JavaScript integrations support both default and named imports:
+
+```ts
+import easeoMetadata from "@easeo/next";      // default
+import { easeoMetadata } from "@easeo/next";  // named
+```
+
+## Python { #python }
+
+| Framework | Import |
+|---|---|
+| [FastAPI](fastapi.md#fastapi) | `from easeo.adapters.fastapi import EaseoSEO` |
+| [Django](django.md#django) | `from easeo.adapters.django import seo_head` |
+| [Flask](flask.md#flask) | `from easeo.adapters.flask import Easeo` |
+| [Zensical](zensical.md#zensical) | `easeo.contrib.zensical` markdown extension |
+
+Python adapters are lazy and installed as extras: `pip install easeo[fastapi]`,
+`[django]`, `[flask]`, `[zensical]`, or `[all]`.
+
+## Choosing an approach { #choosing }
+
+* If your framework has a native metadata API, use the adapter that targets it.
+  Next.js is the clearest example.
+* If it does not, use the render helpers and inject `payload.render_html()`
+  into your template.
+* For static sites, generate payloads at build time and commit the contract.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/integrations/next/
+========================================================================
+
+# Next.js { #nextjs }
+
+`@easeo/next` converts an easeo payload into a native Next.js `Metadata`
+object. Use it inside `generateMetadata`; there is no HTML manipulation.
+
+## Install { #install }
+
+```bash
+npm install @easeo/next
+```
+
+## Usage { #usage }
+
+```tsx
+// app/products/[slug]/page.tsx
+import { easeoMetadata } from "@easeo/next";
+
+export async function generateMetadata({ params }) {
+  const product = await getProduct(params.slug);
+
+  return easeoMetadata({
+    entity: {
+      entityType: "product",
+      title: product.name,
+      description: product.description,
+    },
+    route: `/products/${product.slug}`,
+    config: {
+      canonicalHost: "example.com",
+      publicBaseUrl: "https://example.com",
+    },
+  });
+}
+```
+
+## What it returns { #returns }
+
+| Next.js key | Source |
+|---|---|
+| `title` | `payload.title` |
+| `description` | `payload.description` |
+| `alternates.canonical` | `payload.canonical` |
+| `robots` | `payload.robots` |
+| `openGraph` | title, description, url, siteName, images, locale, type |
+| `twitter` | card, title, description, images, site, creator |
+
+`config` is required: the core rejects an empty `canonicalHost`.
+
+## Notes { #notes }
+
+* Images are only set when the payload has one; otherwise the `images` key is
+  `undefined` and Next.js omits it.
+* Both `import easeoMetadata from ...` and
+  `import { easeoMetadata } from ...` work.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/integrations/nuxt/
+========================================================================
+
+# Nuxt { #nuxt }
+
+`@easeo/nuxt` provides a lightweight module that stores the site config and a
+`useEaseoSeo()` composable for pages.
+
+## Install { #install }
+
+```bash
+npm install @easeo/nuxt
+```
+
+## Usage { #usage }
+
+```ts
+import { useEaseoSeo } from "@easeo/nuxt";
+
+useEaseoSeo({
+  entity: {
+    entityType: "post",
+    title: article.title,
+    description: article.description,
+  },
+  route: `/blog/${article.slug}`,
+  config: {
+    canonicalHost: "example.com",
+    publicBaseUrl: "https://example.com",
+  },
+});
+```
+
+`useEaseoSeo()` always returns the built payload. When Nuxt's `useHead()`
+auto-import is available in a page or component setup context, the composable
+also pushes the tags into the page head.
+
+## Module config { #module }
+
+You can register the module and store the config once:
+
+```ts
+// nuxt.config.ts
+import easeoModule from "@easeo/nuxt";
+
+export default defineNuxtConfig({
+  modules: [easeoModule({ config: { canonicalHost: "example.com", publicBaseUrl: "https://example.com" } })],
+});
+```
+
+After that, `useEaseoSeo()` calls do not need to pass `config`.
+
+## Notes { #notes }
+
+* Passing `config` per call always wins over the module-level config.
+* If neither is present, `useEaseoSeo()` throws with a clear message.
+* Both default and named imports are supported.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/integrations/react/
+========================================================================
+
+# React { #react }
+
+`@easeo/react` provides `<EaseoHead />`, a component that keeps
+`document.head` in sync with an easeo payload on the client.
+
+## Install { #install }
+
+```bash
+npm install @easeo/react
+```
+
+## Usage { #usage }
+
+```tsx
+import { EaseoHead } from "@easeo/react";
+
+<EaseoHead
+  entity={{ entityType: "product", title: product.name, description: product.description }}
+  route={`/products/${product.slug}`}
+  config={{ canonicalHost: "example.com", publicBaseUrl: "https://example.com" }}
+/>
+```
+
+The component renders nothing. It builds the payload on render and updates the
+document head.
+
+## Server rendering { #ssr }
+
+`<EaseoHead />` is SSR-safe: when `document` is unavailable, it returns `null`
+and does nothing. For SSR or SSG, put the rendered head into your HTML
+template:
+
+```tsx
+const payload = buildSeoPayload(entity, route, config);
+
+return (
+  <html>
+    <head dangerouslySetInnerHTML={{ __html: payload.renderHtml() }} />
+    <body>{children}</body>
+  </html>
+);
+```
+
+## Notes { #notes }
+
+* The component returns `null`; it is not a visual element.
+* `renderHtml()` output is already escaped, so it is safe to inject.
+* Both default and named imports are supported.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/integrations/sveltekit/
+========================================================================
+
+# SvelteKit { #sveltekit }
+
+`@easeo/sveltekit` gives you `buildEaseoPayload()` and a `<EaseoHead />`
+component that renders into `<svelte:head>`.
+
+## Install { #install }
+
+```bash
+npm install @easeo/sveltekit
+```
+
+## Usage { #usage }
+
+```svelte
+<script>
+  import { buildEaseoPayload, EaseoHead } from "@easeo/sveltekit";
+  import { page } from "$app/stores";
+
+  const seo = buildEaseoPayload(
+    { entityType: "post", title: "Hello", description: "A post" },
+    $page.url.pathname,
+    { canonicalHost: "example.com", publicBaseUrl: "https://example.com" }
+  );
+</script>
+
+<EaseoHead {seo} />
+```
+
+`buildEaseoPayload(entity, route, config)` is a straight pass-through to
+`buildSeoPayload`; the component then renders the payload's fields.
+
+## What the component renders { #component }
+
+`<EaseoHead />` emits the title, description, canonical link, robots, Open
+Graph, Twitter, and JSON-LD tags.
+
+The JSON-LD payload is serialized with `<` escaped before it is injected, so a
+value containing a closing script tag cannot break out of the block.
+
+## One page, one head { #one-head }
+
+Use `<EaseoHead />` once per page. It writes into SvelteKit's `<svelte:head>`,
+which merges cleanly with other head content.
+
+## Notes { #notes }
+
+* The package is ESM only and exports `EaseoHead.svelte` explicitly.
+* `buildEaseoPayload` and `EaseoHead` can also be imported from the package
+  root.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/integrations/vite/
+========================================================================
+
+# Vite { #vite }
+
+`@easeo/vite` injects SEO tags into the built `index.html` through Vite's
+`transformIndexHtml` hook.
+
+## Install { #install }
+
+```bash
+npm install @easeo/vite
+```
+
+## Usage { #usage }
+
+```js
+// vite.config.mjs
+import { defineConfig } from "vite";
+import easeo from "@easeo/vite";
+
+export default defineConfig({
+  plugins: [
+    easeo({
+      config: {
+        canonicalHost: "example.com",
+        publicBaseUrl: "https://example.com",
+        siteName: "Example",
+      },
+    }),
+  ],
+});
+```
+
+## What it injects { #injects }
+
+For each built HTML page, the plugin adds:
+
+* `<title>`
+* `<meta name="description">`
+* `<link rel="canonical">`
+* `<meta name="robots">`
+* Open Graph tags
+* Twitter Card tags
+* a JSON-LD `<script>` when a schema exists
+
+The route is derived from the page path. A trailing `index.html` is stripped,
+so `/blog/index.html` becomes `/blog`, while a path like `/reindex` is left
+untouched.
+
+## Notes { #notes }
+
+* The JSON-LD `children` is a JSON string with `<` escaped, so it is safe to
+  inject into a script tag.
+* For per-page metadata beyond the path-derived defaults, use a framework with
+  a data layer, or prebuild payloads and inject them yourself.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/integrations/zensical/
+========================================================================
+
+# Zensical { #zensical }
+
+easeo ships a Zensical markdown extension that generates SEO metadata for
+every docs page at build time. This documentation site uses it.
+
+## Install { #install }
+
+```bash
+pip install "easeo[zensical]"
+```
+
+## Configure { #configure }
+
+Add the extension under `[project.markdown_extensions]` in `zensical.toml`:
+
+```toml
+[project.markdown_extensions]
+"easeo.contrib.zensical" = {
+  canonical_host = "example.com",
+  public_base_url = "https://example.com/",
+  site_name = "Example",
+  title_template = "{title} - Example",
+  publisher_name = "Your Name",
+  locale = "en_US",
+  twitter_site = "@yourhandle",
+  auto_generate_schema = true,
+}
+```
+
+## Inject into the head { #inject }
+
+The extension sets `page.meta["_seo_head"]` with the rendered tags. Emit it in
+your theme override:
+
+```html
+{# overrides/main.html #}
+{% block site_meta %}
+{% if page.meta and page.meta._seo_head %}
+{{ page.meta._seo_head | safe }}
+{% else %}
+{{ super() }}
+{% endif %}
+{% endblock %}
+```
+
+## Title and description sources { #sources }
+
+The extension resolves each field in order:
+
+* **Title**: front matter `title`, then `seo.title`, then the first H1, then
+  the site name.
+* **Description**: front matter `description`, then `seo.description`, then an
+  excerpt extracted from the page body.
+
+## Debugging { #debugging }
+
+Set `debug_dir` to dump the resolved payload for each page:
+
+```toml
+"easeo.contrib.zensical" = {
+  canonical_host = "example.com",
+  public_base_url = "https://example.com/",
+  debug_dir = ".seo-debug",
+}
+```
+
+## Notes { #notes }
+
+* The extension needs `easeo` installed in the same environment as Zensical.
+* `markdown` is pulled in by the extra.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/recipes/blog-post/
+========================================================================
+
+# Recipe: Blog Post
+
+A published article with a hero image, author, and breadcrumbs.
+
+```python
+from easeo import (
+    SEOConfig, SEOEntityBuilder, SEOImage, Breadcrumb, build_seo_payload,
+)
+
+config = SEOConfig(
+    canonical_host="blog.example.com",
+    public_base_url="https://blog.example.com",
+    site_name="Example Blog",
+    title_template="{title} - Example Blog",
+    locale="en_US",
+    twitter_site="@example",
+)
+
+entity = (
+    SEOEntityBuilder("post")
+    .title("Introducing easeo")
+    .excerpt("Deterministic SEO payloads for content platforms.")
+    .author_name("Jane Doe")
+    .published_at("2026-01-15")
+    .featured_image("https://cdn.example.com/hero.jpg", width=1200, height=630, alt="Hero")
+    .breadcrumb("Home", "/")
+    .breadcrumb("Blog", "/blog")
+    .build()
+)
+
+payload = build_seo_payload(entity, "/blog/introducing-easeo", config)
+print(payload.render_html())
+```
+
+The resolved payload:
+
+- **title** → `"Introducing easeo - Example Blog"`
+- **og:type** → `article` (post maps to Article)
+- **schema_jsonld** → `Article` plus an appended `BreadcrumbList`
+- **og:image** with `width`/`height`/`alt` from the structured image
+
+Factory shortcut:
+
+```python
+from easeo import from_blog_post
+
+entity = from_blog_post(
+    title="Introducing easeo",
+    body_html="<p>Full article body…</p>",
+    author="Jane Doe",
+    breadcrumbs=[{"name": "Blog", "url": "/blog"}],
+)
+```
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/recipes/category-page/
+========================================================================
+
+# Recipe: Category Page
+
+A taxonomy listing page that uses a site-wide default OG image and a title
+template.
+
+```python
+from easeo import SEOConfig, SEOEntity, build_seo_payload
+
+config = SEOConfig(
+    canonical_host="shop.example.com",
+    public_base_url="https://shop.example.com",
+    site_name="Example Shop",
+    title_template="{title} - Example Shop",
+    default_og_image="https://cdn.example.com/default-og.jpg",
+)
+
+entity = SEOEntity(
+    entity_type="taxonomy",
+    title="Audio",
+    excerpt="All audio products.",
+    breadcrumbs=[
+        # Breadcrumb dataclasses or the builder helpers both work
+    ],
+)
+
+payload = build_seo_payload(entity, "/audio", config)
+```
+
+Key points:
+
+- `entity_type="taxonomy"` maps to a `CollectionPage` schema.
+- The `title_template` applies automatically → `"Audio - Example Shop"`.
+- `default_og_image` fills `og:image` when the entity has no image.
+- With `trailing_slash="always"` in a `URLPolicy`, `/audio` becomes
+  `https://shop.example.com/audio/`.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/recipes/custom-schema/
+========================================================================
+
+# Recipe: Custom JSON-LD
+
+Two ways to control structured data: per-page overrides, or a registered
+generator for an entire schema type.
+
+## Per-page override
+
+```python
+from easeo import SEOConfig, SEOEntity, SEOOverrides, build_seo_payload
+
+config = SEOConfig(canonical_host="example.com", public_base_url="https://example.com")
+entity = SEOEntity(entity_type="page", title="Episode 1")
+
+payload = build_seo_payload(
+    entity,
+    "/podcast/1",
+    config,
+    SEOOverrides(schema_jsonld={
+        "@context": "https://schema.org",
+        "@type": "PodcastEpisode",
+        "name": "Episode 1",
+    }),
+)
+```
+
+## Registered generator
+
+When every page of a given schema type should use the same shape, register a
+generator once. It runs whenever the resolved `@type` matches.
+
+```python
+from easeo import SEOConfig, SchemaRegistry
+
+registry = SchemaRegistry()
+
+@registry.register("Article")
+def podcast_episode(entity, config, canonical, title, description, og_image):
+    return {
+        "@context": "https://schema.org",
+        "@type": "PodcastEpisode",
+        "name": title,
+        "url": canonical,
+        "description": description,
+    }
+
+config = SEOConfig(
+    canonical_host="example.com",
+    public_base_url="https://example.com",
+    schema_registry=registry,
+)
+```
+
+Return `None` to fall back to the built-in schema for that page.
+
+## Site-wide JSON-LD with hooks
+
+To inject an `Organization` schema on *every* page, use a hook:
+
+```python
+from easeo import HookRegistry
+
+hooks = HookRegistry()
+
+@hooks.hook("post_process")
+def inject_organization(payload, entity, config):
+    org = {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": config.publisher_name or "Example",
+        "url": config.public_base_url,
+    }
+    existing = payload.get("schema_jsonld")
+    if isinstance(existing, list):
+        payload["schema_jsonld"] = [org, *existing]
+    elif existing is not None:
+        payload["schema_jsonld"] = [org, existing]
+    else:
+        payload["schema_jsonld"] = org
+    return payload
+
+config = SEOConfig(..., hooks=hooks)
+```
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/recipes/
+========================================================================
+
+# Recipes { #recipes }
+
+Ready-to-use patterns for real-world scenarios. Each recipe shows the inputs
+and the resulting payload shape.
+
+| Recipe | Schema | Key features |
+|--------|--------|--------------|
+| [Blog Post](blog-post.md) | Article | Image dimensions, breadcrumbs, author, registry |
+| [Product Page](product-page.md) | Product | SKU, price, availability, breadcrumbs |
+| [Category Page](category-page.md) | CollectionPage | Title templates, default OG image |
+| [Search Results](search-results.md) | SearchResultsPage | `noindex,follow`, allowed query params |
+| [Multi Language](multi-language.md) | Article | `locale`, `locale:alternate`, overrides |
+| [Custom JSON-LD](custom-schema.md) | any | SchemaRegistry + hooks |
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/recipes/multi-language/
+========================================================================
+
+# Recipe: Multi Language
+
+Locale metadata plus per-language canonical URLs.
+
+```python
+from easeo import SEOConfig, SEOEntity, build_seo_payload
+
+config = SEOConfig(
+    canonical_host="example.com",
+    public_base_url="https://example.com",
+    locale="en_US",
+    locale_alternate=["es_UY", "pt_BR"],
+)
+
+entity = SEOEntity(entity_type="post", title="Hello", excerpt="A post.")
+
+payload = build_seo_payload(entity, "/en/hello", config)
+```
+
+Output includes:
+
+```html
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="es_UY">
+<meta property="og:locale:alternate" content="pt_BR">
+```
+
+Per-language canonical with overrides:
+
+```python
+from easeo import SEOOverrides
+
+payload = build_seo_payload(
+    entity,
+    "/es/hola",
+    {**config, "locale": "es_UY"} if isinstance(config, dict) else config,
+    SEOOverrides(meta_title="Hola"),
+)
+```
+
+In JS, pass overrides as the fourth argument:
+
+```typescript
+buildSeoPayload(entity, "/es/hola", config, { metaTitle: "Hola" });
+```
+
+For `hreflang` link emission, generate one payload per language and combine
+the `canonical` values in your template.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/recipes/product-page/
+========================================================================
+
+# Recipe: Product Page
+
+A product with SKU, price, availability, and a breadcrumb trail.
+
+```python
+from easeo import SEOConfig, SEOEntityBuilder, build_seo_payload
+
+config = SEOConfig(
+    canonical_host="shop.example.com",
+    public_base_url="https://shop.example.com",
+    site_name="Example Shop",
+)
+
+entity = (
+    SEOEntityBuilder("product")
+    .title("Wireless Headphones")
+    .excerpt("Noise-cancelling over-ear headphones.")
+    .sku("WH-1000")
+    .price("79.99", currency="USD")
+    .availability("InStock")
+    .featured_image("https://cdn.example.com/wh1000.jpg", width=1200, height=630)
+    .breadcrumb("Home", "/")
+    .breadcrumb("Audio", "/audio")
+    .build()
+)
+
+payload = build_seo_payload(entity, "/audio/wireless-headphones", config)
+```
+
+Resolved JSON-LD:
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "Wireless Headphones",
+  "offers": {
+    "@type": "Offer",
+    "price": "79.99",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  }
+}
+```
+
+Factory shortcut:
+
+```python
+from easeo import from_product
+
+entity = from_product(
+    name="Wireless Headphones",
+    sku="WH-1000",
+    price=79.99,
+    currency="USD",
+    availability="InStock",
+)
+```
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/recipes/search-results/
+========================================================================
+
+# Recipe: Search Results
+
+A search page should not be indexed, but its query parameters should survive
+normalization so links stay shareable.
+
+```python
+from easeo import SEOConfig, SEOEntity, URLPolicy, build_seo_payload
+
+config = SEOConfig(
+    canonical_host="shop.example.com",
+    public_base_url="https://shop.example.com",
+    url_policy=URLPolicy(
+        enforce_https=True,
+        strip_tracking_params=True,
+        allowed_query_params=["q", "page"],
+    ),
+    search_robots=None,  # defaults to noindex,follow
+)
+
+entity = SEOEntity(entity_type="search", title="Search")
+
+payload = build_seo_payload(entity, "/search?q=headphones&utm_source=ad", config)
+```
+
+Result:
+
+- **robots** → `noindex,follow` (search pages default to this)
+- **canonical** → `https://shop.example.com/search?q=headphones`
+  (`utm_source` stripped, `q` preserved)
+- **schema_jsonld** → `SearchResultsPage`
+
+Override the search robots directive site-wide:
+
+```python
+from easeo import Robots
+
+config = SEOConfig(
+    ...,
+    search_robots=Robots(index=False, follow=True),
+)
+```
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/reference/contracts/
+========================================================================
+
+# SEO Contracts { #seo-contracts }
+
+easeo supports machine-readable SEO contracts that describe what a site's SEO should look like.
+
+## Contract Format
+
+```json
+{
+  "contract_version": "1",
+  "generator": { "name": "easeo", "version": "0.1.0" },
+  "site": { "canonical_host": "example.com", "scheme": "https" },
+  "defaults": {
+    "indexable": true,
+    "canonical": "self",
+    "title": { "required": true },
+    "description": { "required": true }
+  },
+  "rules": [
+    {
+      "match": "/blog/*",
+      "expect": {
+        "schema": { "required": true, "types": ["Article"] }
+      }
+    }
+  ]
+}
+```
+
+## Usage
+
+### Python
+
+```python
+from easeo import SEOContractConfig, build_seo_contract
+
+config = SEOContractConfig(
+    canonical_host="example.com",
+    scheme="https",
+)
+
+contract = build_seo_contract(config)
+contract.write("dist/.easeo/contract.json")
+```
+
+### JavaScript
+
+```typescript
+import { buildSeoContract } from "@easeo/core";
+
+const contract = buildSeoContract({ canonicalHost: "example.com" });
+```
+
+## With cheseo
+
+When `.easeo/contract.json` exists in your build output, `cheseo ./dist` automatically validates against it.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/reference/errors/
+========================================================================
+
+# Errors { #errors }
+
+easeo uses one error hierarchy across all three languages. In Python, every
+error also inherits from `ValueError`, so existing code that catches
+`ValueError` keeps working.
+
+## The hierarchy { #hierarchy }
+
+```text
+EaseoError
+├── InvalidUrlError
+├── ConfigurationError
+├── EntityError
+├── SchemaError
+└── ContractError
+```
+
+| Type | Raised when |
+|---|---|
+| `EaseoError` | Base class; also used for serialization failures |
+| `InvalidUrlError` | A URL is malformed or a URL policy is invalid |
+| `ConfigurationError` | A config or URL policy value fails validation |
+| `EntityError` | An entity or overrides value fails validation |
+| `SchemaError` | JSON-LD construction fails |
+| `ContractError` | Contract generation fails |
+
+## Catching { #catching }
+
+=== "Python"
+
+    ```python
+    from easeo import ConfigurationError, EaseoError
+
+    try:
+        SEOConfig(canonical_host="", public_base_url="https://example.com")
+    except ConfigurationError as err:
+        print("bad config:", err)
+    except EaseoError as err:
+        print("some other easeo error:", err)
+
+    # ValueError also catches every easeo error:
+    try:
+        SEOConfig(canonical_host="", public_base_url="https://example.com")
+    except ValueError as err:
+        print("caught as ValueError:", err)
+    ```
+
+=== "JavaScript"
+
+    ```js
+    const { buildSeoPayload, ConfigurationError, EaseoError } = require("@easeo/core");
+
+    try {
+      buildSeoPayload({ entityType: "page" }, "/x", {
+        canonicalHost: "",
+        publicBaseUrl: "",
+      });
+    } catch (err) {
+      if (err instanceof ConfigurationError) {
+        console.log("bad config:", err.code); // "EASEO_CONFIGURATION"
+      } else if (err instanceof EaseoError) {
+        console.log("other easeo error:", err.message);
+      }
+    }
+    ```
+
+## JavaScript error codes { #codes }
+
+Every error class carries a stable `code`:
+
+| Class | Code |
+|---|---|
+| `EaseoError` | `EASEO_ERROR` |
+| `InvalidUrlError` | `EASEO_INVALID_URL` |
+| `ConfigurationError` | `EASEO_CONFIGURATION` |
+| `EntityError` | `EASEO_ENTITY` |
+| `SchemaError` | `EASEO_SCHEMA` |
+| `ContractError` | `EASEO_CONTRACT` |
+
+## Argument errors { #arguments }
+
+In JavaScript, a missing or wrong-typed argument raises `TypeError` with a
+message naming the function and parameter:
+
+```text
+normalizePath: expected 'path' to be a string, received type undefined
+```
+
+Python raises `TypeError` for the same class of mistake.
+
+## Recap { #recap }
+
+* One hierarchy, five concrete types, one base.
+* Python errors are also `ValueError`.
+* JavaScript errors carry a stable `code`.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/reference/javascript-api/
+========================================================================
+
+# JavaScript/TypeScript API Reference { #javascripttypescript-api-reference }
+
+## Core Types
+
+- `SEOConfig`: Site-wide configuration (`canonicalHost` required)
+- `SEOEntity`: Content entity input
+- `SEOOverrides`: Per-entity overrides (highest precedence)
+- `SEOPayload`: Generated SEO output
+- `OpenGraphPayload`: Open Graph data
+- `TwitterPayload`: Twitter Card data
+- `SEOContract`: SEO contract
+- `SEOContractConfig`: Contract configuration
+- `SEOIssue`: Validation issue
+
+## Core Functions
+
+- `buildSeoPayload(entity, route, config, overrides?)`: Build SEO payload
+- `buildSeoPayloadWithOverrides(entity, route, config, overrides)`: Explicit alias
+- `fromBlogPost`, `fromProduct`, `fromFaq`: entity factories
+- `buildSeoContract(config)`: Build contract
+- `validatePayload(payload)`: Validate payload, returns `SEOIssue[]`
+- `normalizePath(path, options?)`: Normalize URL path
+- `normalizePublicUrl(url, config)`: Build canonical URL
+- `cleanUrl(url)`: Remove tracking params; returns `{ url, removedParams, cleanedParams }` (plain objects)
+- `cleanQuery(query)`: Remove tracking params from a query string
+- `getSchemaRegistry()`: Schema registry introspection (`has`, `listTypes`)
+
+## Payload methods
+
+`renderHtml()`, `renderOpengraph()`, `renderTwitter()`, `renderJsonld()`,
+`toObject()`, `toJSON()`, `toDict()`, `toJSONString()`, `hash()`, `etag()`.
+
+## Serialization
+
+Payload data lives in enumerable camelCase properties, so `Object.keys`,
+spread, and the TypeScript types all agree. Methods are non-enumerable.
+
+```typescript
+const payload = buildSeoPayload(entity, route, config);
+
+Object.keys(payload);
+// ["title", "description", "canonical", "robots", "openGraph", "twitter", "schemaJsonLd"]
+
+{ ...payload };              // plain camelCase data
+JSON.stringify(payload);     // → an object (not a double-encoded string)
+payload.toObject();          // plain camelCase object
+payload.toDict();            // canonical snake_case object (matches Python/Rust)
+payload.toJSONString();      // canonical pretty-printed JSON string
+payload.toString();          // same as toJSONString()
+```
+
+`toObject()` / `toJSON()` are what `JSON.stringify` uses, so `res.json(payload)`
+works as expected. `toDict()` and `toJSONString()` return the canonical
+snake_case wire format shared with the Python and Rust APIs and the published
+JSON schemas.
+
+## Errors
+
+The JS error hierarchy mirrors Rust and Python, and maps core errors to typed
+classes:
+
+```typescript
+import { EaseoError, ConfigurationError, EntityError } from "@easeo/core";
+
+try {
+  buildSeoPayload(entity, route, config);
+} catch (err) {
+  if (err instanceof ConfigurationError) {
+    // err.code === "EASEO_CONFIGURATION"
+  } else if (err instanceof EaseoError) {
+    // base class
+  }
+}
+```
+
+| Class | `code` |
+|-------|--------|
+| `EaseoError` | `EASEO_ERROR` |
+| `InvalidUrlError` | `EASEO_INVALID_URL` |
+| `ConfigurationError` | `EASEO_CONFIGURATION` |
+| `EntityError` | `EASEO_ENTITY` |
+| `SchemaError` | `EASEO_SCHEMA` |
+| `ContractError` | `EASEO_CONTRACT` |
+
+Missing or wrong-typed arguments throw `TypeError` with a message naming the
+function and parameter.
+
+## Payload lookup and equality
+
+```typescript
+payload.get("title");               // field, or undefined
+payload.get("title", "fallback");   // with default
+payload.has("title");               // boolean
+payload.equals(otherPayload);       // deep equality
+```
+
+## Factories
+
+```typescript
+import { fromBlogPost, fromProduct, fromFaq } from "@easeo/core";
+
+fromBlogPost({ title, bodyHtml, slug, author, excerpt, breadcrumbs });
+fromProduct({ name, sku, price, currency, availability, description });
+fromFaq({ questions, title, description });
+```
+
+## Extension points
+
+```typescript
+import { HookRegistry, SchemaRegistry, buildSeoPayload } from "@easeo/core";
+
+const hooks = new HookRegistry();
+hooks.register("post_process", (payload, entity, config) => {
+  payload.generator = "easeo";
+  return payload;
+});
+
+const registry = new SchemaRegistry();
+registry.register("Article", (entity, config, canonical, title) => ({
+  "@context": "https://schema.org",
+  "@type": "PodcastEpisode",
+  name: title,
+}));
+
+const config = { canonicalHost: "example.com", publicBaseUrl: "https://example.com", hooks, schemaRegistry: registry };
+const payload = buildSeoPayload(entity, "/x", config);
+payload.get("generator");   // "easeo"
+```
+
+Both live on the config, so the build stays deterministic and scoped.
+
+## Custom JSON-LD schemas
+
+`SchemaRegistry.register()` is Rust-only and throws from JavaScript by design. Pass custom JSON-LD per page instead:
+
+```typescript
+import { buildSeoPayloadWithOverrides } from "@easeo/core";
+
+const payload = buildSeoPayloadWithOverrides(entity, "/podcast/ep-1", config, {
+  schemaJsonLd: { "@context": "https://schema.org", "@type": "Podcast", name: "My Podcast" },
+});
+```
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/reference/python-api/
+========================================================================
+
+# Python API Reference { #python-api-reference }
+
+## Core Types
+
+- `SEOConfig`: Site-wide configuration
+- `SEOEntity`: Content entity input
+- `SEOOverrides`: Per-entity overrides (highest precedence)
+- `SEOPayload`: Generated SEO output
+- `URLPolicy`: URL normalization policy
+- `Robots`: Robots directive
+- `SEOImage`: Structured image
+- `Breadcrumb`: Breadcrumb item
+- `FAQItem`: FAQ question/answer
+- `SEOContract`: SEO contract
+- `SEOContractConfig`: Contract configuration
+- `SEOIssue`: Validation issue
+- `SEOEntityBuilder`: Fluent builder for `SEOEntity`
+
+## Core Functions
+
+- `build_seo_payload(entity, route, config, overrides=None)`: Build SEO payload
+- `build_seo_payload_dict(entity, route, config, overrides=None)`: Build, returned as a plain dict
+- `build_seo_payload_async(entity, route, config, overrides=None, executor=None)`: Async version (thread-pool offload)
+- `build_seo_contract(config)`: Build contract
+- `validate_payload(payload)`: Validate payload, returns `list[SEOIssue]`
+- `normalize_path(path, policy)`: Normalize URL path
+- `normalize_public_url(url, config)`: Build canonical URL
+- `clean_url(url)`: Remove tracking params; returns `{url, removed_params, cleaned_params}` dicts
+- `clean_query(query)`: Remove tracking params from a query string
+
+`build_seo_payload` accepts per-call `overrides` directly (no separate
+`*_with_overrides` call needed). Both spellings exist and behave identically.
+
+## Payload ergonomics
+
+The payload is dict-compatible and comparable, which is what makes snapshot
+testing work:
+
+```python
+payload = build_seo_payload(entity, "/x", config)
+
+payload["title"]                 # dict-style access
+payload.get("title")             # with optional default
+"title" in payload               # membership
+list(payload)                    # keys
+len(payload)                     # field count
+
+payload == build_seo_payload(entity, "/x", config)  # True
+payload == payload.to_dict()                         # True
+```
+
+## Factories
+
+Convenience constructors for common content types:
+
+```python
+from easeo import from_blog_post, from_product, from_faq
+
+from_blog_post(title, body_html, slug=None, author="", excerpt=None, breadcrumbs=None)
+from_product(name, sku, price, currency="USD", availability="InStock", description=None)
+from_faq(questions, title="FAQ", description=None)
+```
+
+## Async
+
+```python
+from easeo import build_seo_payload_async
+
+payload = await build_seo_payload_async(entity, "/x", config)
+```
+
+The Rust core releases the GIL, so the build genuinely runs off the event
+loop. Configure the pool with `set_executor(executor)`.
+
+## Extension points
+
+```python
+from easeo import HookRegistry, SchemaRegistry
+
+# Post-process every payload for this config
+hooks = HookRegistry()
+
+@hooks.hook("post_process")
+def add_generator(payload, entity, config):
+    payload["generator"] = "easeo"
+    return payload
+
+# Custom JSON-LD per schema type
+registry = SchemaRegistry()
+
+@registry.register("Article")
+def podcast(entity, config, canonical, title, description, og_image):
+    return {"@context": "https://schema.org", "@type": "PodcastEpisode", "name": title}
+
+config = SEOConfig(..., hooks=hooks, schema_registry=registry)
+```
+
+Both live on the config, so the builder stays a pure function of its inputs.
+
+## SEOEntityBuilder
+
+Fluent sugar over the `SEOEntity` constructor:
+
+```python
+from easeo import SEOEntityBuilder
+
+entity = (
+    SEOEntityBuilder("post")
+    .title("Hello World")
+    .excerpt("An example post.")
+    .featured_image("https://example.com/hero.jpg", width=1200, height=630, alt="Hero")
+    .breadcrumb("Home", "/")
+    .breadcrumb("Blog", "/blog")
+    .faq_item("What is easeo?", "Deterministic SEO payloads.")
+    .build()
+)
+```
+
+Methods: `slug`, `title`, `excerpt`, `body_html`, `status`, `featured_image`, `published_at`, `updated_at`, `author_name`, `sku`, `price(amount, currency=None)`, `availability`, `address`, `same_as`, `breadcrumb(name, url)`, `faq_item(question, answer)`, `build()`.
+
+## Custom JSON-LD schemas
+
+`SchemaRegistry` accepts Python callables. Attach it to the config and a
+generator runs whenever the resolved schema `@type` matches:
+
+```python
+from easeo import SchemaRegistry
+
+registry = SchemaRegistry()
+
+@registry.register("Article")
+def podcast(entity, config, canonical, title, description, og_image):
+    return {"@context": "https://schema.org", "@type": "Podcast", "name": title}
+
+config = SEOConfig(..., schema_registry=registry)
+```
+
+Methods: `register`, `unregister`, `get`, `has`, `list_types`.
+
+You can also replace the schema per page with overrides:
+
+```python
+from easeo import SEOOverrides, build_seo_payload
+
+payload = build_seo_payload(
+    entity, "/podcast/ep-1", config,
+    SEOOverrides(schema_jsonld={"@context": "https://schema.org", "@type": "Podcast", "name": "My Podcast"}),
+)
+```
+
+## Framework adapters
+
+- FastAPI: `from easeo.adapters.fastapi import EaseoSEO`
+- Django: `from easeo.adapters.django import seo_head`
+- Flask: `from easeo.adapters.flask import Easeo`
+- Zensical: `easeo.contrib.zensical` markdown extension (see `zensical.toml` example in the repo root)
+
+Install the matching extra: `pip install easeo[fastapi]` (or `django` / `flask` / `zensical` / `all`).
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/reference/rust-api/
+========================================================================
+
+# Rust API { #rust-api }
+
+The Rust crate is `easeo-core`. It contains all the logic; the Python and
+JavaScript packages are thin bindings over it. Use it directly when you are
+building a Rust service or another language binding.
+
+## Cargo { #cargo }
+
+```toml
+[dependencies]
+easeo-core = { path = "../easeo/crates/easeo-core" }
+```
+
+The crate has no I/O dependencies. Its dependency set is `serde`,
+`serde_json`, `url`, `sha2`, and `thiserror`.
+
+## The primary function { #primary }
+
+```rust
+pub fn build_seo_payload(
+    entity: &SEOEntity,
+    route: &str,
+    config: &SEOConfig,
+) -> Result<SEOPayload, EaseoError>
+```
+
+With overrides:
+
+```rust
+pub fn build_seo_payload_with_overrides(
+    entity: &SEOEntity,
+    route: &str,
+    config: &SEOConfig,
+    overrides: &SEOOverrides,
+) -> Result<SEOPayload, EaseoError>
+```
+
+## Example { #example }
+
+```rust
+use easeo_core::{SEOConfig, SEOEntity, EntityType, build_seo_payload};
+
+let config = SEOConfig {
+    canonical_host: "example.com".into(),
+    public_base_url: "https://example.com".into(),
+    ..Default::default()
+};
+
+let entity = SEOEntity {
+    entity_type: EntityType::Post,
+    title: Some("Hello World".into()),
+    excerpt: Some("An example post.".into()),
+    ..Default::default()
+};
+
+let payload = build_seo_payload(&entity, "/blog/hello", &config)?;
+assert_eq!(payload.canonical, "https://example.com/blog/hello");
+```
+
+## Types { #types }
+
+| Type | Purpose |
+|---|---|
+| `SEOConfig` | Site-wide configuration |
+| `SEOEntity` | Content entity, with `EntityType` |
+| `SEOOverrides` | Per-call overrides |
+| `SEOPayload` | Output, with `to_dict`, `to_json`, render methods |
+| `OGPayload`, `TwitterPayload` | Nested payload groups |
+| `SEOImage`, `Robots`, `Breadcrumb`, `FAQItem` | Value types |
+| `SEOContract`, `SEOContractConfig` | Contract model |
+| `EaseoError` | Error enum |
+
+## Payload methods { #payload-methods }
+
+```rust
+payload.to_dict()?;        // serde_json::Value
+payload.to_json()?;        // compact string
+payload.to_json_pretty()?; // pretty string
+payload.render_html()?;    // full <head> block
+payload.render_opengraph();
+payload.render_twitter();
+payload.render_jsonld()?;
+```
+
+Hashing is free-standing:
+
+```rust
+use easeo_core::{hashing, SEOPayload};
+
+let hash = hashing::hash_payload(&payload)?;
+let etag = hashing::etag_payload(&payload)?;
+```
+
+## Custom schemas { #schemas }
+
+The Rust registry accepts closures:
+
+```rust
+use easeo_core::registry::SchemaRegistry;
+
+let mut registry = SchemaRegistry::new();
+registry.register("Podcast", |ctx| {
+    serde_json::json!({
+        "@context": "https://schema.org",
+        "@type": "Podcast",
+        "name": ctx.title,
+    })
+});
+```
+
+Pass the registry through the lower-level `payload::build_seo_payload`
+function when you need it during a build.
+
+## Errors { #errors }
+
+`EaseoError` is a `thiserror` enum with variants `InvalidUrl`,
+`InvalidConfiguration`, `InvalidEntity`, `InvalidSchema`, `SerializationError`,
+`ContractError`, and `URLPolicyError`. See [Errors](errors.md#errors).
+
+## Recap { #recap }
+
+* `easeo-core` holds all logic and has no I/O.
+* The Python and JavaScript packages call into this crate.
+* Rust closures can be registered as schema generators.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/tutorial/configuration/
+========================================================================
+
+# Configuration { #configuration }
+
+`SEOConfig` holds every site-wide value. This page lists all fields with their
+types, defaults, and validation rules.
+
+## SEOConfig fields { #seoconfig }
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `canonical_host` | `str` | required | Hostname only; no scheme, path, port, or trailing dot |
+| `public_base_url` | `str` | required | Absolute `http(s)` URL used as the base for canonical resolution |
+| `url_policy` | `URLPolicy` | defaults | URL normalization rules |
+| `site_name` | `str \| None` | `None` | `og:site_name` and title template context |
+| `title_template` | `str \| None` | `"{title}"` | Must contain the `{title}` placeholder |
+| `default_robots` | `Robots \| None` | `index,follow` | Fallback robots directive |
+| `search_robots` | `Robots \| None` | `noindex,follow` | Robots directive for `search` pages |
+| `default_og_image` | `SEOImage \| None` | `None` | Fallback Open Graph image |
+| `publisher_name` | `str \| None` | `None` | Publisher name for JSON-LD |
+| `publisher_logo` | `str \| None` | `None` | Publisher logo URL for JSON-LD |
+| `locale` | `str \| None` | `None` | `og:locale` |
+| `locale_alternate` | `list[str] \| None` | `None` | `og:locale:alternate` values |
+| `twitter_site` | `str \| None` | `None` | `twitter:site` handle |
+| `auto_generate_schema` | `bool` | `True` | Generate JSON-LD from the entity type |
+| `emit_warnings` | `bool` | `False` | Emit validation warnings |
+| `schema_type_map` | `dict \| None` | built-in | Override the entity-type to schema-type map |
+| `hooks` | `HookRegistry \| None` | `None` | Config-scoped post-processing |
+| `schema_registry` | `SchemaRegistry \| None` | `None` | Config-scoped JSON-LD generators |
+
+The JavaScript field names are the camelCase equivalents: `canonicalHost`,
+`publicBaseUrl`, `urlPolicy`, `siteName`, `titleTemplate`, `defaultRobots`,
+`searchRobots`, `defaultOgImage`, `publisherName`, `publisherLogo`,
+`localeAlternate`, `twitterSite`, `autoGenerateSchema`, `emitWarnings`,
+`schemaTypeMap`, `hooks`, `schemaRegistry`.
+
+## Validation rules { #validation }
+
+* `canonical_host` must be host-only. A scheme, path, query, port, or trailing
+  dot is rejected with `ConfigurationError`.
+* `public_base_url` must be an absolute `http` or `https` URL.
+* `title_template` must contain `{title}`.
+* `locale_alternate` is deduplicated and stripped.
+* `url_policy` must be a `URLPolicy` instance.
+
+## URLPolicy { #urlpolicy }
+
+Controls canonical URL normalization.
+
+| Field | Type | Default |
+|---|---|---|
+| `enforce_https` | `bool` | `True` |
+| `lowercase_paths` | `bool` | `True` |
+| `trailing_slash` | `"always" \| "never" \| "preserve"` | `"never"` |
+| `collapse_duplicate_slashes` | `bool` | `True` |
+| `strip_tracking_params` | `bool` | `True` |
+| `allowed_query_params` | `list[str]` | `[]` |
+
+=== "Python"
+
+    ```python
+    from easeo import SEOConfig, URLPolicy
+
+    config = SEOConfig(
+        canonical_host="example.com",
+        public_base_url="https://example.com",
+        url_policy=URLPolicy(
+            trailing_slash="always",
+            allowed_query_params=["page", "q"],
+        ),
+    )
+    ```
+
+=== "JavaScript"
+
+    ```js
+    const config = {
+      canonicalHost: "example.com",
+      publicBaseUrl: "https://example.com",
+      trailingSlash: "always",
+      allowedQueryParams: ["page", "q"],
+    };
+    ```
+
+## Robots { #robots }
+
+A structured robots directive. All fields are optional.
+
+| Field | Type |
+|---|---|
+| `index` | `bool` |
+| `follow` | `bool` |
+| `max_snippet` | `int` |
+| `max_image_preview` | `str` |
+| `max_video_preview` | `int` |
+
+=== "Python"
+
+    ```python
+    from easeo import Robots
+
+    robots = Robots(index=True, follow=False, max_snippet=160)
+    # serializes to "index,nofollow,max-snippet:160"
+    ```
+
+## Recap { #recap }
+
+* Two required fields: `canonical_host` and `public_base_url`.
+* `URLPolicy` controls URL normalization.
+* `Robots`, `SEOImage`, `Breadcrumb`, and `FAQItem` are the supporting value
+  types.
+
+**Next:** the [Concepts](../concepts/index.md) track explains how the pieces
+fit together.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/tutorial/contracts/
+========================================================================
+
+# Contracts { #contracts }
+
+An **SEO contract** is a machine-readable description of your SEO intent. It
+says which pages must have which metadata. You commit it to the repository and
+validate your generated output against it in CI, so an accidental SEO change
+fails the build instead of shipping.
+
+## What a contract contains { #what }
+
+A contract describes:
+
+* the site (canonical host and scheme)
+* default expectations for every page
+* rules that match specific routes
+* exceptions for known deviations
+
+Each expectation can require fields, set length bounds, assert a schema type,
+and more. See the [API reference](../reference/python-api.md) for the full
+`SEOExpectation` field list.
+
+## Build a contract { #build }
+
+=== "Python"
+
+    ```python
+    from easeo import SEOContractConfig, build_seo_contract
+
+    contract = build_seo_contract(
+        SEOContractConfig(canonical_host="example.com", scheme="https")
+    )
+
+    print(contract.to_json())
+    ```
+
+=== "JavaScript"
+
+    ```js
+    const { buildSeoContract } = require("@easeo/core");
+
+    const contract = buildSeoContract({
+      canonicalHost: "example.com",
+      scheme: "https",
+    });
+
+    console.log(contract.toJSONString());
+    ```
+
+Output:
+
+```json
+{
+  "contract_version": "1",
+  "generator": { "name": "easeo", "version": "0.1.0" },
+  "site": { "canonical_host": "example.com", "scheme": "https" },
+  "defaults": {},
+  "rules": [],
+  "exceptions": {}
+}
+```
+
+## Add rules { #rules }
+
+A rule matches a route and applies an expectation.
+
+=== "Python"
+
+    ```python
+    from easeo import (
+        SEOContractConfig,
+        SEOContractRule,
+        SEOExpectation,
+        build_seo_contract,
+    )
+
+    contract = build_seo_contract(
+        SEOContractConfig(
+            canonical_host="example.com",
+            scheme="https",
+            defaults=SEOExpectation(
+                title=SEOExpectation(min_length=20, max_length=60),
+                description=SEOExpectation(min_length=70, max_length=160),
+                og_required=True,
+                schema_required=True,
+            ),
+            rules=[
+                SEOContractRule(
+                    match="/blog/*",
+                    expect=SEOExpectation(schema_types=["Article"]),
+                ),
+                SEOContractRule(
+                    match="/search",
+                    expect=SEOExpectation(indexable=False),
+                ),
+            ],
+            exceptions={
+                "/legal/terms": SEOExpectation(description=SEOExpectation(required=False)),
+            },
+        )
+    )
+    ```
+
+=== "JavaScript"
+
+    ```js
+    const { buildSeoContract } = require("@easeo/core");
+
+    const contract = buildSeoContract({
+      canonicalHost: "example.com",
+      scheme: "https",
+      defaults: {
+        title: { minLength: 20, maxLength: 60 },
+        description: { minLength: 70, maxLength: 160 },
+        ogRequired: true,
+        schemaRequired: true,
+      },
+      rules: [
+        { match: "/blog/*", expect: { schemaTypes: ["Article"] } },
+        { match: "/search", expect: { indexable: false } },
+      ],
+      exceptions: {
+        "/legal/terms": { description: { required: false } },
+      },
+    });
+    ```
+
+## Write it to disk { #write }
+
+=== "Python"
+
+    ```python
+    contract.write(".easeo/contract.json")
+    ```
+
+=== "JavaScript"
+
+    ```js
+    const { writeFileSync } = require("node:fs");
+    const { mkdirSync } = require("node:fs");
+
+    mkdirSync(".easeo", { recursive: true });
+    writeFileSync(".easeo/contract.json", JSON.stringify(contract.toDict(), null, 2));
+    ```
+
+The Astro integration emits this file automatically at build time. See
+[Contracts in CI](../guides/contracts-in-ci.md) for the full workflow.
+
+## Recap { #recap }
+
+* A contract encodes SEO intent as data.
+* Build it with `build_seo_contract` and commit the JSON.
+* Validate generated payloads against it in CI.
+
+**Next:** [Configuration](configuration.md#configuration).
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/tutorial/fallback-and-overrides/
+========================================================================
+
+# Fallback and Overrides { #fallback-and-overrides }
+
+Every field in the payload resolves through a priority chain. The first
+non-empty value wins. This page shows how to control that chain.
+
+You do not need to set every field on every entity. Set sensible defaults in
+the config, override per entity for most fields, and override per call for
+edge cases.
+
+## The precedence order { #precedence }
+
+1. **`SEOOverrides`**: per-call overrides (highest priority).
+2. **`SEOEntity`**: content fields.
+3. **`SEOConfig`**: site-wide defaults.
+4. **Hardcoded defaults**: library fallbacks (lowest priority).
+
+## Setting a config default { #config-default }
+
+A site-wide fallback image applies to every page that has no image of its own:
+
+=== "Python"
+
+    ```python
+    config = SEOConfig(
+        canonical_host="example.com",
+        public_base_url="https://example.com",
+        default_og_image="https://cdn.example.com/default.jpg",
+    )
+    ```
+
+=== "JavaScript"
+
+    ```js
+    const config = {
+      canonicalHost: "example.com",
+      publicBaseUrl: "https://example.com",
+      defaultOgImage: "https://cdn.example.com/default.jpg",
+    };
+    ```
+
+## Overriding per entity { #entity-override }
+
+A featured image on the entity beats the config default:
+
+=== "Python"
+
+    ```python
+    from easeo import SEOImage
+
+    entity = SEOEntity(
+        entity_type="post",
+        title="Introducing easeo",
+        featured_image=SEOImage(
+            url="https://cdn.example.com/hero.jpg",
+            width=1200,
+            height=630,
+            alt="Hero",
+        ),
+    )
+    ```
+
+=== "JavaScript"
+
+    ```js
+    const entity = {
+      entityType: "post",
+      title: "Introducing easeo",
+      image: "https://cdn.example.com/hero.jpg",
+      imageWidth: 1200,
+      imageHeight: 630,
+      imageAlt: "Hero",
+    };
+    ```
+
+## Overriding per call { #call-override }
+
+`SEOOverrides` wins over both the entity and the config. Use it for one-off
+pages, campaign tags, or a locked-down title.
+
+=== "Python"
+
+    ```python
+    from easeo import SEOOverrides, build_seo_payload
+
+    payload = build_seo_payload(
+        entity,
+        "/blog/introducing-easeo",
+        config,
+        SEOOverrides(
+            meta_title="Introducing easeo (launch edition)",
+            twitter_creator="@easeo",
+            skip_title_template=True,
+        ),
+    )
+    ```
+
+=== "JavaScript"
+
+    ```js
+    const payload = buildSeoPayload(
+      entity,
+      "/blog/introducing-easeo",
+      config,
+      {
+        metaTitle: "Introducing easeo (launch edition)",
+        twitterCreator: "@easeo",
+        skipTitleTemplate: true,
+      }
+    );
+    ```
+
+## A worked example { #worked-example }
+
+```python
+config = SEOConfig(
+    canonical_host="example.com",
+    public_base_url="https://example.com",
+    default_og_image="https://cdn.example.com/default.jpg",
+)
+
+entity = SEOEntity(
+    entity_type="post",
+    title="Post title",
+    featured_image=SEOImage(url="https://cdn.example.com/hero.jpg"),
+)
+
+overrides = SEOOverrides(og_image=SEOImage(url="https://cdn.example.com/urgent.jpg"))
+
+payload = build_seo_payload(entity, "/post", config, overrides)
+assert payload.og.image == "https://cdn.example.com/urgent.jpg"
+```
+
+The `og:image` resolution ran `overrides.og_image` first, found a value, and
+stopped. Without the override it would have used the entity image; without
+that, the config default.
+
+## Field-by-field chains { #chains }
+
+The full chain for every field, including the entity-status rules for robots
+and the cascade from Open Graph to Twitter, is in
+[Fallback Chains](../concepts/fallback-chains.md).
+
+## Recap { #recap }
+
+* Resolution is Overrides > Entity > Config > default.
+* Use config defaults for site-wide values.
+* Use entity fields for content-specific values.
+* Use `SEOOverrides` for per-call edge cases.
+
+**Next:** [Rendering HTML](rendering.md#rendering-html).
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/tutorial/first-payload/
+========================================================================
+
+# First Payload { #first-payload }
+
+By the end of this page you will build an SEO payload, read its fields, and
+serialize it. Make sure easeo is installed first.
+
+```bash
+pip install easeo
+```
+
+## Step 1: Configure the site { #step-1-configure }
+
+`SEOConfig` holds values that are the same for every page on your site. Two
+fields are required:
+
+* `canonical_host`: the hostname only, with no scheme and no path.
+* `public_base_url`: the absolute base URL used to resolve canonical paths.
+
+=== "Python"
+
+    ```python
+    from easeo import SEOConfig
+
+    config = SEOConfig(
+        canonical_host="example.com",
+        public_base_url="https://example.com",
+        site_name="Example",
+        title_template="{title} - Example",
+    )
+    ```
+
+=== "JavaScript"
+
+    ```js
+    const config = {
+      canonicalHost: "example.com",
+      publicBaseUrl: "https://example.com",
+      siteName: "Example",
+      titleTemplate: "{title} - Example",
+    };
+    ```
+
+## Step 2: Describe the content { #step-2-describe }
+
+`SEOEntity` describes one piece of content. Only `entity_type` is required.
+
+=== "Python"
+
+    ```python
+    from easeo import SEOEntity
+
+    entity = SEOEntity(
+        entity_type="post",
+        title="Introducing easeo",
+        excerpt="Deterministic SEO payloads for content platforms.",
+    )
+    ```
+
+=== "JavaScript"
+
+    ```js
+    const entity = {
+      entityType: "post",
+      title: "Introducing easeo",
+      description: "Deterministic SEO payloads for content platforms.",
+    };
+    ```
+
+Valid entity types are: `home`, `post`, `page`, `video`, `taxonomy`, `search`,
+`product`, `organization`, `local_business`, `faq`, and `other`.
+
+## Step 3: Build the payload { #step-3-build }
+
+The one function you need:
+
+=== "Python"
+
+    ```python
+    from easeo import build_seo_payload
+
+    payload = build_seo_payload(entity, "/blog/introducing-easeo", config)
+    ```
+
+=== "JavaScript"
+
+    ```js
+    const { buildSeoPayload } = require("@easeo/core");
+
+    const payload = buildSeoPayload(entity, "/blog/introducing-easeo", config);
+    ```
+
+## Step 4: Read the result { #step-4-read }
+
+=== "Python"
+
+    ```python
+    print(payload.title)
+    # "Introducing easeo - Example"
+
+    print(payload.canonical)
+    # "https://example.com/blog/introducing-easeo"
+
+    print(payload.robots)
+    # "index,follow"
+
+    print(payload.og.type)
+    # "article"
+
+    print(payload.schema_jsonld["@type"])
+    # "Article"
+    ```
+
+=== "JavaScript"
+
+    ```js
+    console.log(payload.title);
+    // "Introducing easeo - Example"
+
+    console.log(payload.canonical);
+    // "https://example.com/blog/introducing-easeo"
+
+    console.log(payload.openGraph.type);
+    // "article"
+
+    console.log(payload.schemaJsonLd["@type"]);
+    // "Article"
+    ```
+
+## Step 5: Serialize { #step-5-serialize }
+
+=== "Python"
+
+    ```python
+    payload.to_dict()      # canonical snake_case dict
+    payload.to_json()      # canonical JSON string
+    ```
+
+=== "JavaScript"
+
+    ```js
+    payload.toDict();          // canonical snake_case object
+    payload.toObject();        // camelCase object
+    JSON.stringify(payload);   // uses toObject()
+    payload.toJSONString();    // canonical JSON string
+    ```
+
+## Determinism check { #determinism-check }
+
+Building the same payload twice always yields the same bytes:
+
+=== "Python"
+
+    ```python
+    a = build_seo_payload(entity, "/blog/introducing-easeo", config)
+    b = build_seo_payload(entity, "/blog/introducing-easeo", config)
+
+    assert a == b
+    assert a.hash() == b.hash()
+    ```
+
+=== "JavaScript"
+
+    ```js
+    const a = buildSeoPayload(entity, "/blog/introducing-easeo", config);
+    const b = buildSeoPayload(entity, "/blog/introducing-easeo", config);
+
+    console.assert(a.equals(b));
+    console.assert(a.hash() === b.hash());
+    ```
+
+## Recap { #recap }
+
+* `SEOConfig` is site-wide; `SEOEntity` is per page.
+* `build_seo_payload(entity, route, config)` returns an `SEOPayload`.
+* The payload is structured, hashable, and serializable.
+
+**Next:** [Fallback and Overrides](fallback-and-overrides.md#fallback-and-overrides).
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/tutorial/
+========================================================================
+
+# Tutorial { #tutorial }
+
+This tutorial teaches you how to use **easeo** to turn a content entity into a
+deterministic SEO payload, step by step. Each page builds on the previous one,
+but every page is self-contained: you can jump straight to the topic you need
+and copy-paste the examples.
+
+## What is easeo? { #what-is-easeo }
+
+**easeo** is a deterministic SEO metadata generator. It takes a content entity,
+a route path, and a site configuration, and produces one structured payload:
+
+- canonical URL
+- title and description
+- robots directives
+- Open Graph tags
+- Twitter Card tags
+- JSON-LD structured data
+
+The core is written in Rust and shipped to Python and JavaScript/TypeScript, so
+the same inputs produce byte-for-byte identical output in every language.
+
+```text
+content entity + route + config
+    |
+    v
+easeo (library)
+    |
+    v
+SEOPayload
+    |
+    +--> framework adapter --> <head>
+    |
+    +--> SEO contract --> cheseo validation
+```
+
+## What easeo is not { #what-easeo-is-not }
+
+- **Not an SEO crawler.** That is a separate tool.
+- **Not a score generator.** It does not grade your content.
+- **Not a keyword research tool.** It formats the data you give it.
+- **Not a browser automation framework.** It performs no I/O and no network
+  calls.
+- **Not an analytics platform.** It stores no state.
+
+## How the tutorial works { #how-the-tutorial-works }
+
+Each page covers one topic:
+
+1. [Installation](installation.md#installation): install the Python or
+   JavaScript package.
+2. [First Payload](first-payload.md#first-payload): build your first payload.
+3. [Fallback and Overrides](fallback-and-overrides.md#fallback-and-overrides):
+   control which value wins.
+4. [Rendering HTML](rendering.md#rendering-html): emit a ready-to-use
+   `<head>` block.
+5. [Contracts](contracts.md#contracts): turn SEO intent into a testable
+   artifact.
+6. [Configuration](configuration.md#configuration): every config field.
+
+!!! tip "Two audiences, one API"
+
+    The Python and JavaScript APIs are intentionally mirrored. Every concept
+    on these pages exists in both, with `snake_case` in Python and `camelCase`
+    in JavaScript. Pick your language and follow along; the other binding
+    works the same way.
+
+## Recap { #recap }
+
+* **easeo** generates deterministic SEO payloads from content entities.
+* One primary function: `build_seo_payload(entity, route, config)`.
+* The Rust core guarantees identical output across Python and JavaScript.
+
+**Next:** [Installation](installation.md#installation), install easeo and
+verify the version.
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/tutorial/installation/
+========================================================================
+
+# Installation { #installation }
+
+easeo ships as two packages backed by the same Rust core.
+
+## Python { #python }
+
+```bash
+pip install easeo
+```
+
+Requires Python 3.10 or newer. The wheel bundles the compiled Rust extension,
+so there is no build step and no separate Rust toolchain to install.
+
+Optional extras add the framework adapters:
+
+```bash
+pip install "easeo[fastapi]"
+pip install "easeo[django]"
+pip install "easeo[flask]"
+pip install "easeo[zensical]"
+pip install "easeo[all]"     # every adapter
+```
+
+## JavaScript / TypeScript { #javascript }
+
+```bash
+npm install @easeo/core
+```
+
+The published package bundles a prebuilt native module for Linux (glibc and
+musl), macOS, and Windows on x64 and arm64. Node 18 or newer is required.
+
+Framework integrations are separate packages:
+
+```bash
+npm install @easeo/next
+npm install @easeo/astro
+npm install @easeo/vite
+npm install @easeo/nuxt
+npm install @easeo/sveltekit
+npm install @easeo/react
+```
+
+## Verify the install { #verify }
+
+=== "Python"
+
+    ```python
+    import easeo
+    print(easeo.__version__)
+    # 0.1.0
+    ```
+
+=== "JavaScript"
+
+    ```js
+    const easeo = require("@easeo/core");
+    console.log(typeof easeo.buildSeoPayload);
+    // function
+    ```
+
+## Building from source { #from-source }
+
+You need a Rust toolchain (stable) plus `maturin` for Python or `@napi-rs/cli`
+for Node.
+
+```bash
+# Rust core
+cargo build --release
+
+# Python bindings
+maturin develop -m crates/easeo-python/Cargo.toml
+
+# Node bindings
+cd packages/core
+napi build --platform --release --manifest-path ../../crates/easeo-node/Cargo.toml
+cp ../../crates/easeo-node/*.node .
+```
+
+## Recap { #recap }
+
+* `pip install easeo` or `npm install @easeo/core`.
+* Extras add the framework adapters, not the core.
+* Prebuilt wheels and native modules mean no compiler is needed.
+
+**Next:** [First Payload](first-payload.md#first-payload).
+
+========================================================================
+PAGE: https://easeo.emiliano-go.com/tutorial/rendering/
+========================================================================
+
+# Rendering HTML { #rendering-html }
+
+A payload can render itself to HTML. This is the fastest way to get SEO tags
+into a `<head>` block, and it is safe by construction: user data is escaped,
+and the JSON-LD script is escaped so a value cannot break out of the tag.
+
+## Full head block { #render-html }
+
+=== "Python"
+
+    ```python
+    payload = build_seo_payload(entity, "/blog/post", config)
+    print(payload.render_html())
+    ```
+
+=== "JavaScript"
+
+    ```js
+    const payload = buildSeoPayload(entity, "/blog/post", config);
+    console.log(payload.renderHtml());
+    ```
+
+Output:
+
+```html
+<title>Introducing easeo - Example</title>
+<meta name="description" content="Deterministic SEO payloads for content platforms.">
+<link rel="canonical" href="https://example.com/blog/introducing-easeo">
+<meta name="robots" content="index,follow">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Introducing easeo - Example">
+...
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  ...
+}
+</script>
+```
+
+!!! warning "Escape before injecting"
+
+    `render_html()` returns an HTML string. In a template engine, mark it as
+    safe (Jinja2 `|safe`, Django `mark_safe`, Svelte `{@html}`) only because
+    the payload has already escaped the values it renders. Do not
+    hand-interpolate raw entity fields into your own `<head>`.
+
+## Granular rendering { #granular }
+
+When you need to place sections separately, render them individually.
+
+| Python | JavaScript | Output |
+|---|---|---|
+| `render_html()` | `renderHtml()` | full `<head>` block |
+| `render_opengraph()` | `renderOpengraph()` | `og:*` tags only |
+| `render_twitter()` | `renderTwitter()` | `twitter:*` tags only |
+| `render_jsonld()` | `renderJsonld()` | JSON-LD `<script>` only |
+
+=== "Python"
+
+    ```python
+    head = (
+        payload.render_opengraph()
+        + payload.render_twitter()
+        + payload.render_jsonld()
+    )
+    ```
+
+=== "JavaScript"
+
+    ```js
+    const head =
+      payload.renderOpengraph() +
+      payload.renderTwitter() +
+      payload.renderJsonld();
+    ```
+
+## Using it in a template { #templates }
+
+=== "Jinja2"
+
+    ```jinja
+    <head>
+      {{ payload.render_html() | safe }}
+    </head>
+    ```
+
+=== "Django"
+
+    ```django
+    {% load easeo_tags %}
+    <head>
+      {% easeo_head entity request.path %}
+    </head>
+    ```
+
+=== "React"
+
+    ```tsx
+    import { EaseoHead } from "@easeo/react";
+
+    <EaseoHead entity={entity} route={route} config={config} />
+    ```
+
+=== "Svelte"
+
+    ```svelte
+    <script>
+      import { buildEaseoPayload, EaseoHead } from "@easeo/sveltekit";
+      const seo = buildEaseoPayload(entity, route, config);
+    </script>
+
+    <EaseoHead {seo} />
+    ```
+
+## Why rendering lives in the core { #why-core }
+
+The HTML is generated by the Rust core, not by a template. That means the same
+payload produces the same markup in Python and JavaScript, and the escaping
+rules are identical everywhere. See [Payload Model](../concepts/payload-model.md)
+for the exact tag order.
+
+## Recap { #recap }
+
+* `render_html()` produces a complete, escaped `<head>` block.
+* Granular renderers are available for custom layouts.
+* Framework adapters call these for you.
+
+**Next:** [Contracts](contracts.md#contracts).
