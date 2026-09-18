@@ -1,6 +1,11 @@
 <script>
   /** @type {import("@easeo/core").SEOPayload} */
   export let seo;
+
+  // Escape "<" so a closing script tag inside schema data cannot break out.
+  $: safeJsonLd = seo.schemaJsonLd
+    ? JSON.stringify(seo.schemaJsonLd).replace(/</g, "\\u003c")
+    : null;
 </script>
 
 <svelte:head>
@@ -23,9 +28,7 @@
     <meta name="twitter:image" content={seo.twitter.image} />
   {/if}
 
-  {#if seo.schemaJsonLd}
-    <script type="application/ld+json">
-      {@html JSON.stringify(seo.schemaJsonLd)}
-    </script>
+  {#if safeJsonLd}
+    <script type="application/ld+json">{@html safeJsonLd}</script>
   {/if}
 </svelte:head>
