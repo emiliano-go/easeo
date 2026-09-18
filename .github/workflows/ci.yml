@@ -68,7 +68,7 @@ jobs:
       - name: Install napi CLI
         run: npm install -g @napi-rs/cli
       - name: Build native module
-        run: cd packages/core && napi build --release --manifest-path ../../crates/easeo-node/Cargo.toml && cp ../../crates/easeo-node/*.node .
+        run: cd packages/core && napi build --platform --release --manifest-path ../../crates/easeo-node/Cargo.toml && cp ../../crates/easeo-node/*.node .
       - name: Run Node tests
         run: node --test tests/javascript/*.cjs
 
