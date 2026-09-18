@@ -1,0 +1,195 @@
+:root {
+    --md-primary-fg-color: #cd4bfb;
+}
+
+/* Zensical renders a synthetic homepage H1 for root index.md. */
+.md-content__inner > h1#__skip {
+    display: none;
+}
+
+/* Prevent wrapping in the first-column code cells of dependency tables. */
+.md-typeset table td:first-child code {
+    white-space: nowrap;
+}
+
+/*
+ * Mobile sidebar drawer.
+ *
+ * The Zensical "modern" theme HTML includes a hamburger button, drawer
+ * checkbox (#__drawer), and overlay, but no CSS to show/hide the sidebar
+ * on small screens - the sidebar is always visible as a sticky column.
+ *
+ * This overrides the sidebar to a fixed overlay drawer on mobile (<1220px).
+ */
+@media screen and (max-width: 76.234375em) {
+    .md-sidebar--primary {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        bottom: 0 !important;
+        height: 100dvh !important;
+        max-width: 20rem;
+        width: 80vw !important;
+        z-index: 99 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        border-right: 1px solid var(--md-default-fg-color--lightest);
+        transform: translateX(-100%) !important;
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+
+    .md-sidebar--primary .md-sidebar__scrollwrap {
+        overscroll-behavior-y: contain;
+    }
+
+    body.drawer-open .md-sidebar--primary {
+        transform: translateX(0) !important;
+    }
+
+    .md-overlay {
+        position: fixed !important;
+        inset: 0 !important;
+        z-index: 98 !important;
+        background: rgba(0,0,0,0.4);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body.drawer-open .md-overlay {
+        opacity: 1;
+        pointer-events: auto;
+    }
+}
+
+/*
+ * Desktop tab dropdowns.
+ *
+ * Tabs with children (rendered by docs/overrides/partials/tabs-item.html)
+ * open a menu on hover, focus, or an explicit toggle class set by the
+ * script in main.html. Only active on desktop; the mobile drawer
+ * (<1220px) already exposes every page and is left untouched.
+ */
+@media screen and (min-width: 76.25em) {
+    .md-tabs__item--has-dropdown {
+        position: relative;
+    }
+
+    .md-tabs__caret {
+        margin-left: 0.2em;
+        vertical-align: -0.15em;
+        opacity: 0.7;
+    }
+
+    .md-tabs__dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        min-width: 14rem;
+        max-height: min(32rem, 70vh);
+        overflow-y: auto;
+        margin: 0;
+        padding: 0.3rem 0;
+        list-style: none;
+        background: var(--md-default-bg-color);
+        border: 1px solid var(--md-default-fg-color--lightest);
+        border-radius: 0.25rem;
+        box-shadow: 0 0.4rem 1rem rgba(0, 0, 0, 0.15);
+        /* Match the mobile drawer's panel look: card on top of content. */
+        z-index: 3;
+        /* Hidden state */
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-0.2rem);
+        transition:
+            opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+            transform 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+            visibility 0s linear 0.15s;
+    }
+
+    /* Open state: hover, keyboard focus inside, or JS toggle for touch. */
+    .md-tabs__item--has-dropdown:hover > .md-tabs__dropdown,
+    .md-tabs__item--has-dropdown:focus-within > .md-tabs__dropdown,
+    .md-tabs__item--has-dropdown.md-tabs__item--open > .md-tabs__dropdown {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+        transition-delay: 0s;
+    }
+
+    .md-tabs__dropdown-item,
+    .md-tabs__dropdown-group {
+        margin: 0;
+        padding: 0;
+    }
+
+    .md-tabs__dropdown-link {
+        display: block;
+        padding: 0.35rem 1rem;
+        font-size: 0.7rem;
+        line-height: 1.5;
+        color: var(--md-default-fg-color);
+        white-space: nowrap;
+    }
+
+    .md-tabs__dropdown-link:hover,
+    .md-tabs__dropdown-link:focus {
+        color: var(--md-accent-fg-color);
+        background: var(--md-accent-fg-color--transparent);
+    }
+
+    .md-tabs__dropdown-link--active {
+        color: var(--md-accent-fg-color);
+        font-weight: 600;
+    }
+
+    .md-tabs__dropdown-group {
+        margin-top: 0.35rem;
+        padding-top: 0.35rem;
+        border-top: 1px solid var(--md-default-fg-color--lightest);
+    }
+
+    .md-tabs__dropdown-group:first-child {
+        margin-top: 0;
+        padding-top: 0;
+        border-top: none;
+    }
+
+    /* Group header: accent-colored chip so groups (Core, Performance, ...)
+       stand apart from plain page entries at a glance. */
+    .md-tabs__dropdown-label {
+        display: block;
+        margin: 0 0.4rem 0.15rem;
+        padding: 0.2rem 0.6rem;
+        font-size: 0.58rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--md-accent-fg-color);
+        background: var(--md-accent-fg-color--transparent);
+        border-radius: 0.1rem;
+        white-space: nowrap;
+    }
+
+    /* Group children are indented with a guide line so the hierarchy
+       reads even when the menu is long. */
+    .md-tabs__dropdown-list {
+        margin: 0 0 0.1rem;
+        padding: 0 0 0 0.35rem;
+        list-style: none;
+        border-left: 0.15rem solid var(--md-default-fg-color--lightest);
+        margin-left: 1rem;
+    }
+
+    /* The theme clips tab content (overflow:auto + contain), which would
+       cut off the dropdown panels; let them overflow on desktop. */
+    .md-tabs,
+    .md-tabs__list {
+        overflow: visible;
+    }
+
+    .md-tabs__list {
+        contain: none;
+    }
+}
