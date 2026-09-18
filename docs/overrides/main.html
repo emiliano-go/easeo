@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block extrahead %}
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% endblock %}
+
+{% block site_meta %}
+{# _seo_head is emitted by the easeo.contrib.zensical markdown extension. #}
+{% if page.meta and page.meta._seo_head %}
+{{ page.meta._seo_head | safe }}
+{% else %}
+{{ super() }}
+{% endif %}
+<link rel="alternate" type="text/plain" title="LLMs TXT" href="/llms.txt">
+<link rel="alternate" type="text/plain" title="LLMs Full" href="/llms-full.txt">
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+(function() {
+  var drawer = document.getElementById('__drawer');
+  if (drawer) {
+    drawer.addEventListener('change', function() {
+      document.body.classList.toggle('drawer-open', this.checked);
+    });
+    document.addEventListener('click', function(e) {
+      var pageLink = e.target.closest('.md-sidebar--primary a.md-nav__link[href]');
+      if (pageLink && drawer.checked) {
+        drawer.checked = false;
+        document.body.classList.remove('drawer-open');
+      }
+    });
+  }
+
+  /* Desktop tab dropdowns: tap toggles, tap-elsewhere and Escape close. */
+  var openDropdown = null;
+  function closeDropdown() {
+    if (openDropdown) {
+      openDropdown.classList.remove('md-tabs__item--open');
+      openDropdown = null;
+    }
+  }
+  document.querySelectorAll('.md-tabs__item--has-dropdown > .md-tabs__link').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      var item = link.parentElement;
+      if (window.matchMedia('(hover: hover)').matches) return;
+      e.preventDefault();
+      if (openDropdown === item) {
+        closeDropdown();
+      } else {
+        closeDropdown();
+        item.classList.add('md-tabs__item--open');
+        openDropdown = item;
+      }
+    });
+  });
+  document.addEventListener('click', function(e) {
+    if (openDropdown && !openDropdown.contains(e.target)) closeDropdown();
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeDropdown();
+  });
+})();
+</script>
+{% endblock %}

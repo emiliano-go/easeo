@@ -1,0 +1,69 @@
+{#-
+  Desktop tab dropdowns.
+
+  The builtin partial only renders the top-level link for sections, which
+  leaves the desktop tab bar without access to nested pages. This override
+  renders a dropdown menu (same entries as the mobile drawer) for any tab
+  with children, driven by hover/focus CSS and a small toggle script in
+  main.html.
+-#}
+{% macro render_content(nav_item, ref) %}
+  {% set ref = ref or nav_item %}
+  {{ ref.title or nav_item.title }}
+{% endmacro %}
+
+{% macro render_dropdown_item(item) %}
+  {% if item.children %}
+    <li class="md-tabs__dropdown-group">
+      <span class="md-tabs__dropdown-label">{{ item.title }}</span>
+      <ul class="md-tabs__dropdown-list">
+        {% for child in item.children %}
+          {{ render_dropdown_item(child) }}
+        {% endfor %}
+      </ul>
+    </li>
+  {% else %}
+    <li class="md-tabs__dropdown-item{% if item.active %} md-tabs__dropdown-item--active{% endif %}">
+      <a href="{{ item.url | url }}" class="md-tabs__dropdown-link{% if item.active %} md-tabs__dropdown-link--active{% endif %}">{{ item.title }}</a>
+    </li>
+  {% endif %}
+{% endmacro %}
+
+{% macro render(nav_item, ref) %}
+  {% set ref = ref or nav_item %}
+  {% set class = "md-tabs__item" %}
+  {% if ref.active %}
+    {% set class = class ~ " md-tabs__item--active" %}
+  {% endif %}
+  {% if nav_item.children %}
+    {% set _ = namespace(index = none) %}
+    {% if "navigation.indexes" in features %}
+      {% for item in nav_item.children %}
+        {% if item.is_index and _.index is none %}
+          {% set _.index = item %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+    {% set index = _.index %}
+    {% set first = index or nav_item.children | first %}
+    <li class="{{ class }} md-tabs__item--has-dropdown">
+      <a href="{{ first.url | url }}" class="md-tabs__link">
+        {{ render_content(nav_item) }}
+        <svg class="md-tabs__caret" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </a>
+      <ul class="md-tabs__dropdown">
+        {% for item in nav_item.children %}
+          {{ render_dropdown_item(item) }}
+        {% endfor %}
+      </ul>
+    </li>
+  {% else %}
+    <li class="{{ class }}">
+      <a href="{{ nav_item.url | url }}" class="md-tabs__link">
+        {{ render_content(nav_item) }}
+      </a>
+    </li>
+  {% endif %}
+{% endmacro %}
