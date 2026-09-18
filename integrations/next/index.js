@@ -75,4 +75,6 @@ function easeoMetadata(input) {
   };
 }
 
-module.exports = { easeoMetadata, default: easeoMetadata };
+module.exports = easeoMetadata;
+module.exports.easeoMetadata = easeoMetadata;
+module.exports.default = easeoMetadata;
