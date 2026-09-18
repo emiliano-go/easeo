@@ -6,13 +6,6 @@ This package provides Python bindings for the easeo Rust core.
 __version__ = "0.1.0"
 
 from easeo._easeo_native import (
-    # Exceptions
-    EaseoError,
-    InvalidUrlError,
-    ConfigurationError,
-    EntityError,
-    SchemaError,
-    ContractError,
     # Types
     SEOConfig,
     SEOEntity,
@@ -31,7 +24,6 @@ from easeo._easeo_native import (
     SEOContractRule,
     SEOExpectation,
     SEOIssue,
-    SchemaRegistry,
     # Functions
     build_seo_payload,
     build_seo_payload_with_overrides,
@@ -44,7 +36,19 @@ from easeo._easeo_native import (
     clean_query_fn as clean_query,
 )
 
+from easeo.async_builder import build_seo_payload_async, set_executor
 from easeo.builder import SEOEntityBuilder
+from easeo.exceptions import (
+    ConfigurationError,
+    ContractError,
+    EaseoError,
+    EntityError,
+    InvalidUrlError,
+    SchemaError,
+)
+from easeo.factories import from_blog_post, from_faq, from_product
+from easeo.hooks import HookRegistry
+from easeo.registry import SchemaRegistry
 
 __all__ = [
     # Exceptions
@@ -74,10 +78,17 @@ __all__ = [
     "SEOIssue",
     "SchemaRegistry",
     "SEOEntityBuilder",
+    "HookRegistry",
+    # Factories
+    "from_blog_post",
+    "from_product",
+    "from_faq",
     # Functions
     "build_seo_payload",
     "build_seo_payload_with_overrides",
     "build_seo_payload_dict",
+    "build_seo_payload_async",
+    "set_executor",
     "build_seo_contract",
     "validate_payload",
     "normalize_path",
