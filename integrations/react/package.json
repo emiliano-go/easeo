@@ -15,6 +15,14 @@
     "index.d.ts"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/emiliano-go/easeo.git",
+    "directory": "integrations/react"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "peerDependencies": {
     "@easeo/core": "^0.1.0",
     "react": ">=17.0.0"
