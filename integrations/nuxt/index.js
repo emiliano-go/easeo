@@ -73,4 +73,6 @@ function useEaseoSeo(input) {
   return payload;
 }
 
-module.exports = { useEaseoSeo, default: easeoModule };
+module.exports = easeoModule;
+module.exports.useEaseoSeo = useEaseoSeo;
+module.exports.default = easeoModule;
