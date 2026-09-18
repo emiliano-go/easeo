@@ -1,0 +1,71 @@
+# easeo Documentation
+
+> easeo generates deterministic SEO metadata (canonical, Open Graph, Twitter Cards, JSON-LD) from content entities. Rust core with Python and JavaScript/TypeScript bindings.
+
+## Overview
+- [easeo](https://easeo.emiliano-go.com/): Deterministic SEO payload generation
+- [Why easeo](https://easeo.emiliano-go.com/about/why-easeo/): The problem with ad-hoc metadata and how determinism fixes it
+
+## Tutorial
+- [Tutorial index](https://easeo.emiliano-go.com/tutorial/): What easeo is and how the tutorial is organized
+- [Installation](https://easeo.emiliano-go.com/tutorial/installation/): Install the Python and JavaScript packages
+- [First Payload](https://easeo.emiliano-go.com/tutorial/first-payload/): Config, entity, build, read, serialize
+- [Fallback and Overrides](https://easeo.emiliano-go.com/tutorial/fallback-and-overrides/): Control which value wins
+- [Rendering HTML](https://easeo.emiliano-go.com/tutorial/rendering/): Emit a safe head block
+- [Contracts](https://easeo.emiliano-go.com/tutorial/contracts/): Machine-readable SEO intent
+- [Configuration](https://easeo.emiliano-go.com/tutorial/configuration/): Every config field
+
+## Concepts
+- [Concepts index](https://easeo.emiliano-go.com/concepts/): How easeo is put together
+- [Determinism](https://easeo.emiliano-go.com/concepts/determinism/): The core guarantee and what it enables
+- [Entity Model](https://easeo.emiliano-go.com/concepts/entity-model/): Content fields and entity types
+- [Payload Model](https://easeo.emiliano-go.com/concepts/payload-model/): Output shape, methods, render order
+- [Fallback Chains](https://easeo.emiliano-go.com/concepts/fallback-chains/): How every field resolves
+- [URL Normalization](https://easeo.emiliano-go.com/concepts/url-normalization/): The canonical URL pipeline
+- [JSON-LD Schemas](https://easeo.emiliano-go.com/concepts/schemas/): Built-in schemas and extension
+- [Validation](https://easeo.emiliano-go.com/concepts/validation/): Best-practice checks and rule ids
+
+## Guides
+- [Guides index](https://easeo.emiliano-go.com/guides/): Task-oriented walkthroughs
+- [Custom JSON-LD](https://easeo.emiliano-go.com/guides/custom-schemas/): Overrides, registries, hooks
+- [Hooks](https://easeo.emiliano-go.com/guides/hooks/): Config-scoped post-processing
+- [Contracts in CI](https://easeo.emiliano-go.com/guides/contracts-in-ci/): Enforce SEO intent in your pipeline
+- [Framework Recipes](https://easeo.emiliano-go.com/guides/framework-recipes/): Copy-paste patterns per framework
+- [Migration from seoslug](https://easeo.emiliano-go.com/guides/migration-from-seoslug/): API mapping and changes
+
+## Reference
+- [Python API](https://easeo.emiliano-go.com/reference/python-api/): Python types and functions
+- [JavaScript API](https://easeo.emiliano-go.com/reference/javascript-api/): JS/TS types, serialization, errors
+- [Rust API](https://easeo.emiliano-go.com/reference/rust-api/): easeo-core crate
+- [Contracts](https://easeo.emiliano-go.com/reference/contracts/): Contract model and expectations
+- [Errors](https://easeo.emiliano-go.com/reference/errors/): Error hierarchy and codes
+
+## Integrations
+- [Integrations index](https://easeo.emiliano-go.com/integrations/): All adapters
+- [Next.js](https://easeo.emiliano-go.com/integrations/next/): Native Metadata object
+- [Astro](https://easeo.emiliano-go.com/integrations/astro/): Build integration and contract emission
+- [Vite](https://easeo.emiliano-go.com/integrations/vite/): transformIndexHtml plugin
+- [Nuxt](https://easeo.emiliano-go.com/integrations/nuxt/): useEaseoSeo composable
+- [SvelteKit](https://easeo.emiliano-go.com/integrations/sveltekit/): buildEaseoPayload and EaseoHead
+- [React](https://easeo.emiliano-go.com/integrations/react/): EaseoHead component
+- [FastAPI](https://easeo.emiliano-go.com/integrations/fastapi/): EaseoSEO helper
+- [Django](https://easeo.emiliano-go.com/integrations/django/): Template tags and settings
+- [Flask](https://easeo.emiliano-go.com/integrations/flask/): Context processor and Easeo helper
+- [Zensical](https://easeo.emiliano-go.com/integrations/zensical/): Markdown extension
+
+## Recipes
+- [Recipes index](https://easeo.emiliano-go.com/recipes/): Real-world patterns
+- [Blog Post](https://easeo.emiliano-go.com/recipes/blog-post/): Article, image, breadcrumbs
+- [Product Page](https://easeo.emiliano-go.com/recipes/product-page/): Product schema
+- [Category Page](https://easeo.emiliano-go.com/recipes/category-page/): CollectionPage
+- [Search Results](https://easeo.emiliano-go.com/recipes/search-results/): noindex, query params
+- [Multi Language](https://easeo.emiliano-go.com/recipes/multi-language/): locale:alternate
+- [Custom Schema](https://easeo.emiliano-go.com/recipes/custom-schema/): SchemaRegistry and hooks
+
+## Examples
+- [Examples](https://easeo.emiliano-go.com/examples/): Runnable Python, JavaScript, and Rust snippets
+
+## About
+- [Comparison](https://easeo.emiliano-go.com/about/comparison/): Manual SEO vs easeo
+- [Changelog](https://easeo.emiliano-go.com/about/changelog/): Release notes
+- [Contributing](https://easeo.emiliano-go.com/about/contributing/): Build, test, conventions
