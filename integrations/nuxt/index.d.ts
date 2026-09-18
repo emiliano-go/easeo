@@ -6,7 +6,7 @@ export interface EaseoNuxtConfig {
 }
 
 /** Lightweight Nuxt module: stores site-wide config for useEaseoSeo(). */
-declare function easeoModule(options: EaseoNuxtConfig): { name: string };
+export declare function easeoModule(options: EaseoNuxtConfig): { name: string };
 
 /**
  * Set SEO metadata for the current page.
