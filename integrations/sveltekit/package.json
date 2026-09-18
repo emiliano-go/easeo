@@ -24,6 +24,14 @@
     "EaseoHead.svelte"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/emiliano-go/easeo.git",
+    "directory": "integrations/sveltekit"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "peerDependencies": {
     "@easeo/core": "^0.1.0",
     "svelte": ">=4.0.0"
