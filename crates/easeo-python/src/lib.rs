@@ -3,8 +3,10 @@
 #![allow(clippy::useless_conversion)]
 
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList};
+use pyo3::types::{PyDict, PyList, PyTuple, PyType};
 use serde_json::Value as JsonValue;
+use std::ffi::CString;
+use std::sync::OnceLock;
 
 /// Type alias for Python objects (replaces removed PyObject in PyO3 0.29)
 type PyObject = Py<PyAny>;
@@ -12,24 +14,117 @@ type PyObject = Py<PyAny>;
 use easeo_core as core;
 
 // ── Python exception hierarchy ───────────────────────────────────────
+//
+// The exception types are built at module import time (not with
+// `create_exception!`) so that `EaseoError` inherits from both `Exception`
+// and `ValueError`. That keeps `except ValueError` working for code coming
+// from seoslug, while `except EaseoError` still catches everything.
 
-pyo3::create_exception!(_easeo_native, EaseoError, pyo3::exceptions::PyException);
-pyo3::create_exception!(_easeo_native, InvalidUrlError, EaseoError);
-pyo3::create_exception!(_easeo_native, ConfigurationError, EaseoError);
-pyo3::create_exception!(_easeo_native, EntityError, EaseoError);
-pyo3::create_exception!(_easeo_native, SchemaError, EaseoError);
-pyo3::create_exception!(_easeo_native, ContractError, EaseoError);
+static EXC_TYPES: OnceLock<ExceptionTypes> = OnceLock::new();
+
+struct ExceptionTypes {
+    easeo: Py<PyType>,
+    invalid_url: Py<PyType>,
+    configuration: Py<PyType>,
+    entity: Py<PyType>,
+    schema: Py<PyType>,
+    contract: Py<PyType>,
+}
+
+/// Build an exception type with multiple bases by calling `type(name, bases, {})`.
+/// This is the supported way to express multiple inheritance for exceptions.
+fn make_exception_tuple(
+    py: Python<'_>,
+    qualified: &CString,
+    bases: &Bound<'_, PyTuple>,
+) -> PyResult<Py<PyType>> {
+    let builtins = py.import("builtins")?;
+    let type_callable = builtins.getattr("type")?;
+    let name = qualified.to_str().unwrap().rsplit('.').next().unwrap();
+    let ns = PyDict::new(py);
+    let ty = type_callable.call1((name, bases, ns))?;
+    Ok(ty.cast_into::<PyType>()?.unbind())
+}
+
+fn build_exception_types(py: Python<'_>) -> PyResult<ExceptionTypes> {
+    let builtins = py.import("builtins")?;
+    let value_error = builtins.getattr("ValueError")?;
+
+    // `ValueError` already subclasses `Exception`, so it alone gives both
+    // `except ValueError` (seoslug compat) and `except Exception` coverage.
+    let base_bases = PyTuple::new(py, [&value_error])?;
+    let easeo = make_exception_tuple(
+        py,
+        &CString::new("_easeo_native.EaseoError").unwrap(),
+        &base_bases,
+    )?;
+
+    let sub_bases = PyTuple::new(py, [easeo.bind(py).as_any()])?;
+    let invalid_url = make_exception_tuple(
+        py,
+        &CString::new("_easeo_native.InvalidUrlError").unwrap(),
+        &sub_bases,
+    )?;
+    let configuration = make_exception_tuple(
+        py,
+        &CString::new("_easeo_native.ConfigurationError").unwrap(),
+        &sub_bases,
+    )?;
+    let entity = make_exception_tuple(
+        py,
+        &CString::new("_easeo_native.EntityError").unwrap(),
+        &sub_bases,
+    )?;
+    let schema = make_exception_tuple(
+        py,
+        &CString::new("_easeo_native.SchemaError").unwrap(),
+        &sub_bases,
+    )?;
+    let contract = make_exception_tuple(
+        py,
+        &CString::new("_easeo_native.ContractError").unwrap(),
+        &sub_bases,
+    )?;
+
+    Ok(ExceptionTypes {
+        easeo,
+        invalid_url,
+        configuration,
+        entity,
+        schema,
+        contract,
+    })
+}
+
+fn exception_types(py: Python<'_>) -> PyResult<&'static ExceptionTypes> {
+    if let Some(types) = EXC_TYPES.get() {
+        return Ok(types);
+    }
+    let types = build_exception_types(py)?;
+    // A concurrent initializer may have won the race; either value is valid.
+    let _ = EXC_TYPES.set(types);
+    Ok(EXC_TYPES.get().expect("exception types initialized"))
+}
+
+fn raise(py: Python<'_>, exc: &Py<PyType>, msg: String) -> PyErr {
+    PyErr::from_type(exc.bind(py).clone(), msg)
+}
 
 fn convert_core_error(e: core::EaseoError) -> PyErr {
-    match e {
-        core::EaseoError::InvalidUrl(msg) => InvalidUrlError::new_err(msg),
-        core::EaseoError::InvalidConfiguration(msg) => ConfigurationError::new_err(msg),
-        core::EaseoError::InvalidEntity(msg) => EntityError::new_err(msg),
-        core::EaseoError::InvalidSchema(msg) => SchemaError::new_err(msg),
-        core::EaseoError::SerializationError(msg) => EaseoError::new_err(msg),
-        core::EaseoError::ContractError(msg) => ContractError::new_err(msg),
-        core::EaseoError::URLPolicyError(msg) => ConfigurationError::new_err(msg),
-    }
+    Python::attach(|py| {
+        let Ok(types) = exception_types(py) else {
+            return PyErr::new::<pyo3::exceptions::PyException, _>(e.to_string());
+        };
+        match e {
+            core::EaseoError::InvalidUrl(msg) => raise(py, &types.invalid_url, msg),
+            core::EaseoError::InvalidConfiguration(msg) => raise(py, &types.configuration, msg),
+            core::EaseoError::InvalidEntity(msg) => raise(py, &types.entity, msg),
+            core::EaseoError::InvalidSchema(msg) => raise(py, &types.schema, msg),
+            core::EaseoError::SerializationError(msg) => raise(py, &types.easeo, msg),
+            core::EaseoError::ContractError(msg) => raise(py, &types.contract, msg),
+            core::EaseoError::URLPolicyError(msg) => raise(py, &types.configuration, msg),
+        }
+    })
 }
 
 // ── Python wrapper for SEOAuthor ─────────────────────────────────────
@@ -694,15 +789,31 @@ impl TryFrom<&URLPolicy> for core::URLPolicy {
 // ── Python wrapper for SEOConfig ──────────────────────────────────────
 
 #[pyclass(from_py_object)]
-#[derive(Clone)]
 struct SEOConfig {
     inner: core::SEOConfig,
+    /// Config-scoped ``HookRegistry`` (or any object with a ``run`` method).
+    /// Opaque to Rust; consulted by the Python-level ``run_hooks`` wrapper.
+    hooks: Option<PyObject>,
+    /// Config-scoped ``SchemaRegistry`` with Python-callable generators.
+    schema_registry: Option<PyObject>,
+}
+
+impl Clone for SEOConfig {
+    fn clone(&self) -> Self {
+        // Python handles are GIL-bound and cannot be cloned here; clone only
+        // the Rust config and drop the Python-side handles.
+        Self {
+            inner: self.inner.clone(),
+            hooks: None,
+            schema_registry: None,
+        }
+    }
 }
 
 #[pymethods]
 impl SEOConfig {
     #[new]
-    #[pyo3(signature = (canonical_host, public_base_url, *, url_policy=None, default_robots=None, default_og_image=None, site_name=None, title_template=None, search_robots=None, auto_generate_schema=true, publisher_name=None, publisher_logo=None, locale=None, locale_alternate=None, twitter_site=None, emit_warnings=false, schema_type_map=None))]
+    #[pyo3(signature = (canonical_host, public_base_url, *, url_policy=None, default_robots=None, default_og_image=None, site_name=None, title_template=None, search_robots=None, auto_generate_schema=true, publisher_name=None, publisher_logo=None, locale=None, locale_alternate=None, twitter_site=None, emit_warnings=false, schema_type_map=None, hooks=None, schema_registry=None))]
     fn new(
         canonical_host: String,
         public_base_url: String,
@@ -720,6 +831,8 @@ impl SEOConfig {
         twitter_site: Option<String>,
         emit_warnings: bool,
         schema_type_map: Option<Vec<(String, String)>>,
+        hooks: Option<PyObject>,
+        schema_registry: Option<PyObject>,
     ) -> PyResult<Self> {
         let up = match url_policy {
             Some(p) => (&p).try_into()?,
@@ -756,10 +869,32 @@ impl SEOConfig {
             twitter_site,
             emit_warnings,
         };
-        config
-            .validate()
-            .map_err(|e| PyErr::new::<ConfigurationError, _>(e.to_string()))?;
-        Ok(Self { inner: config })
+        config.validate().map_err(convert_core_error)?;
+        Ok(Self {
+            inner: config,
+            hooks,
+            schema_registry,
+        })
+    }
+
+    #[getter]
+    fn hooks(&self, py: Python<'_>) -> Option<PyObject> {
+        self.hooks.as_ref().map(|h| h.clone_ref(py))
+    }
+
+    #[setter]
+    fn set_hooks(&mut self, hooks: Option<PyObject>) {
+        self.hooks = hooks;
+    }
+
+    #[getter]
+    fn schema_registry(&self, py: Python<'_>) -> Option<PyObject> {
+        self.schema_registry.as_ref().map(|r| r.clone_ref(py))
+    }
+
+    #[setter]
+    fn set_schema_registry(&mut self, registry: Option<PyObject>) {
+        self.schema_registry = registry;
     }
 
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
@@ -803,8 +938,7 @@ impl SEOEntity {
         address: Option<String>,
         faq_items: Option<Vec<FAQItem>>,
     ) -> PyResult<Self> {
-        let et = core::EntityType::from_str(entity_type)
-            .map_err(|e| PyErr::new::<EntityError, _>(e.to_string()))?;
+        let et = core::EntityType::from_str(entity_type).map_err(convert_core_error)?;
         let fi = featured_image.map(|i| (&i).into());
         let bcs = breadcrumbs.map(|v| v.iter().map(|b| b.into()).collect());
         let faq = faq_items.map(|v| v.iter().map(|f| f.into()).collect());
@@ -938,6 +1072,65 @@ struct SEOPayload {
 
 #[pymethods]
 impl SEOPayload {
+    /// Dict-style access: payload["title"].
+    fn __getitem__<'py>(&self, py: Python<'py>, key: &str) -> PyResult<PyObject> {
+        let dict = self.to_dict(py)?;
+        match dict.get_item(key)? {
+            Some(value) => Ok(value.into()),
+            None => Err(PyErr::new::<pyo3::exceptions::PyKeyError, _>(
+                key.to_string(),
+            )),
+        }
+    }
+
+    #[pyo3(signature = (key, default=None))]
+    fn get<'py>(
+        &self,
+        py: Python<'py>,
+        key: &str,
+        default: Option<PyObject>,
+    ) -> PyResult<PyObject> {
+        let dict = self.to_dict(py)?;
+        match dict.get_item(key)? {
+            Some(value) => Ok(value.into()),
+            None => Ok(default.unwrap_or_else(|| py.None())),
+        }
+    }
+
+    fn keys<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyList>> {
+        let dict = self.to_dict(py)?;
+        let keys: Vec<PyObject> = dict.keys().into_iter().map(|k| k.into()).collect();
+        PyList::new(py, keys)
+    }
+
+    fn __contains__<'py>(&self, py: Python<'py>, key: &str) -> PyResult<bool> {
+        let dict = self.to_dict(py)?;
+        Ok(dict.get_item(key)?.is_some())
+    }
+
+    fn __iter__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        let keys = self.keys(py)?;
+        keys.call_method0("__iter__")
+    }
+
+    fn __len__<'py>(&self, py: Python<'py>) -> PyResult<usize> {
+        Ok(self.to_dict(py)?.len())
+    }
+
+    /// Equality against another payload or a plain dict. This is what makes
+    /// `assert payload == expected_dict` work for snapshot testing.
+    fn __eq__(&self, other: &Bound<'_, PyAny>) -> PyResult<bool> {
+        let py = other.py();
+        if let Ok(other_payload) = other.extract::<PyRef<SEOPayload>>() {
+            return Ok(self.inner == other_payload.inner);
+        }
+        if let Ok(dict) = other.cast::<PyDict>() {
+            let mine = self.to_dict(py)?;
+            return mine.eq(dict);
+        }
+        Ok(false)
+    }
+
     #[getter]
     fn title(&self) -> &str {
         &self.inner.title
@@ -1180,6 +1373,17 @@ fn json_to_pyobject<'py>(py: Python<'py>, val: &JsonValue) -> PyResult<Bound<'py
     json_to_pyobject_depth(py, val, 0)
 }
 
+/// Convert an arbitrary Python object to `serde_json::Value` via
+/// ``json.dumps``. Used to read hook output back into a payload.
+fn py_to_json_value(py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<JsonValue> {
+    let json_module = py.import("json")?;
+    let json_str = json_module
+        .call_method1("dumps", (obj,))?
+        .extract::<String>()?;
+    serde_json::from_str(&json_str)
+        .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))
+}
+
 fn json_to_pyobject_depth<'py>(
     py: Python<'py>,
     val: &JsonValue,
@@ -1222,9 +1426,106 @@ fn json_to_pyobject_depth<'py>(
 
 // ── Module functions ──────────────────────────────────────────────────
 
+/// Run the config-scoped hooks (if any) over the freshly built payload.
+///
+/// Hooks are a Python-level concept, so we round-trip through the wire
+/// format: payload -> dict -> hooks -> payload. The result stays
+/// deterministic because the hook registry is part of the config.
+fn apply_hooks(
+    py: Python<'_>,
+    payload: core::SEOPayload,
+    entity: &SEOEntity,
+    config: &SEOConfig,
+) -> PyResult<core::SEOPayload> {
+    let Some(hooks) = config.hooks.as_ref() else {
+        return Ok(payload);
+    };
+
+    let as_dict = payload.to_dict().map_err(convert_core_error)?;
+    let dict = json_to_pydict(py, &as_dict)?;
+    let entity_obj = Py::new(py, entity.clone())?;
+    let config_obj = Py::new(py, config.clone())?;
+
+    let result = hooks.bind(py).getattr("run")?.call1((
+        "post_process",
+        dict.clone(),
+        entity_obj,
+        config_obj,
+    ))?;
+
+    // Hooks must return a dict (mirrors seoslug). Tolerate `None` by
+    // treating it as "no change" so a forgotten return does not crash.
+    let mutated = if result.is_none() {
+        dict
+    } else {
+        result.cast_into::<PyDict>().map_err(|_| {
+            PyErr::new::<pyo3::exceptions::PyTypeError, _>("post_process hooks must return a dict")
+        })?
+    };
+
+    let json_val = py_to_json_value(py, mutated.as_any())?;
+    core::SEOPayload::from_dict(&json_val).map_err(convert_core_error)
+}
+
+/// Replace the auto-generated schema with a registered generator's output
+/// when one matches the resolved `@type`. Runs before hooks so hooks see
+/// the final schema.
+fn apply_schema_registry(
+    py: Python<'_>,
+    payload: core::SEOPayload,
+    entity: &SEOEntity,
+    config: &SEOConfig,
+) -> PyResult<core::SEOPayload> {
+    let Some(registry) = config.schema_registry.as_ref() else {
+        return Ok(payload);
+    };
+
+    let Some(schema_type) = payload
+        .schema_jsonld
+        .as_ref()
+        .and_then(|s| s.get("@type"))
+        .and_then(|t| t.as_str())
+        .map(str::to_string)
+    else {
+        return Ok(payload);
+    };
+
+    let registry = registry.bind(py);
+    if !registry
+        .call_method1("has", (&schema_type,))?
+        .extract::<bool>()?
+    {
+        return Ok(payload);
+    }
+
+    let og_image = payload.og.image.clone();
+    let generated = registry.call_method1(
+        "generate",
+        (
+            &schema_type,
+            Py::new(py, entity.clone())?,
+            Py::new(py, config.clone())?,
+            &payload.canonical,
+            &payload.title,
+            &payload.description,
+            og_image,
+        ),
+    )?;
+
+    if generated.is_none() {
+        return Ok(payload);
+    }
+
+    let json_val = py_to_json_value(py, generated.as_any())?;
+    let mut updated = payload;
+    updated.schema_jsonld = Some(json_val);
+    Ok(updated)
+}
+
 #[pyfunction]
 #[pyo3(signature = (entity, route, config, overrides=None))]
 fn build_seo_payload(
+    py: Python<'_>,
     entity: &SEOEntity,
     route: &str,
     config: &SEOConfig,
@@ -1234,11 +1535,14 @@ fn build_seo_payload(
     let ov = overrides.map(|o| &o.inner).unwrap_or(&default_ov);
     let payload = core::build_seo_payload_with_overrides(&entity.inner, route, &config.inner, ov)
         .map_err(convert_core_error)?;
+    let payload = apply_schema_registry(py, payload, entity, config)?;
+    let payload = apply_hooks(py, payload, entity, config)?;
     Ok(SEOPayload { inner: payload })
 }
 
 #[pyfunction]
 fn build_seo_payload_with_overrides(
+    py: Python<'_>,
     entity: &SEOEntity,
     route: &str,
     config: &SEOConfig,
@@ -1251,6 +1555,8 @@ fn build_seo_payload_with_overrides(
         &overrides.inner,
     )
     .map_err(convert_core_error)?;
+    let payload = apply_schema_registry(py, payload, entity, config)?;
+    let payload = apply_hooks(py, payload, entity, config)?;
     Ok(SEOPayload { inner: payload })
 }
 
@@ -1263,14 +1569,13 @@ fn build_seo_payload_dict<'py>(
     config: &SEOConfig,
     overrides: Option<&SEOOverrides>,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let payload = build_seo_payload(entity, route, config, overrides)?;
+    let payload = build_seo_payload(py, entity, route, config, overrides)?;
     payload.to_dict(py)
 }
 
 #[pyfunction]
 fn build_seo_contract(config: &SEOContractConfig) -> PyResult<SEOContract> {
-    let contract = core::build_seo_contract(&config.inner)
-        .map_err(|e| PyErr::new::<ContractError, _>(e.to_string()))?;
+    let contract = core::build_seo_contract(&config.inner).map_err(convert_core_error)?;
     Ok(SEOContract { inner: contract })
 }
 
@@ -1322,16 +1627,14 @@ fn clean_query_fn(query: &str) -> String {
 
 #[pymodule]
 fn _easeo_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    // Exceptions
-    m.add("EaseoError", m.py().get_type::<EaseoError>())?;
-    m.add("InvalidUrlError", m.py().get_type::<InvalidUrlError>())?;
-    m.add(
-        "ConfigurationError",
-        m.py().get_type::<ConfigurationError>(),
-    )?;
-    m.add("EntityError", m.py().get_type::<EntityError>())?;
-    m.add("SchemaError", m.py().get_type::<SchemaError>())?;
-    m.add("ContractError", m.py().get_type::<ContractError>())?;
+    // Exceptions (built dynamically so they inherit from ValueError too)
+    let types = exception_types(m.py())?;
+    m.add("EaseoError", types.easeo.clone_ref(m.py()))?;
+    m.add("InvalidUrlError", types.invalid_url.clone_ref(m.py()))?;
+    m.add("ConfigurationError", types.configuration.clone_ref(m.py()))?;
+    m.add("EntityError", types.entity.clone_ref(m.py()))?;
+    m.add("SchemaError", types.schema.clone_ref(m.py()))?;
+    m.add("ContractError", types.contract.clone_ref(m.py()))?;
 
     // Types
     m.add_class::<SEOImage>()?;
