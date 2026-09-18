@@ -64,11 +64,28 @@ pub struct SEOPayload {
     pub twitter: TwitterPayload,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub schema_jsonld: Option<serde_json::Value>,
+    /// Additional fields added by config-scoped hooks. A `BTreeMap` keeps
+    /// serialization deterministic; the field is flattened so extras appear
+    /// as top-level keys in the wire format.
+    #[serde(
+        flatten,
+        default,
+        skip_serializing_if = "std::collections::BTreeMap::is_empty"
+    )]
+    pub extra: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 impl SEOPayload {
     pub fn to_dict(&self) -> Result<serde_json::Value, crate::error::EaseoError> {
         serde_json::to_value(self)
+            .map_err(|e| crate::error::EaseoError::SerializationError(e.to_string()))
+    }
+
+    /// Rebuild a payload from its wire format. Unknown top-level keys are
+    /// preserved in `extra`. Used by config-scoped hooks, which receive the
+    /// payload as a dict and may add arbitrary keys.
+    pub fn from_dict(value: &serde_json::Value) -> Result<Self, crate::error::EaseoError> {
+        serde_json::from_value(value.clone())
             .map_err(|e| crate::error::EaseoError::SerializationError(e.to_string()))
     }
 
@@ -462,5 +479,6 @@ pub fn build_seo_payload(
         og,
         twitter,
         schema_jsonld: final_schema,
+        extra: std::collections::BTreeMap::new(),
     })
 }
