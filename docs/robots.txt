@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://rypipe.emiliano-go.com/sitemap.xml
+Sitemap: https://easeo.emiliano-go.com/sitemap.xml
