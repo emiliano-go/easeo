@@ -1,5 +1,6 @@
 ---
 title: "URL Normalization"
+description: "The canonical URL pipeline: path rules, query filtering, and host validation."
 ---
 
 # URL Normalization { #url-normalization }
