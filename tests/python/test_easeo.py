@@ -1,11 +1,5 @@
 """Tests for easeo Python bindings."""
 
-import sys
-import os
-
-# Add the parent directory to the path so we can import easeo
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'python'))
-
 
 def test_basic_import():
     """Test that all expected types can be imported."""
