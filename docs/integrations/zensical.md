@@ -32,6 +32,60 @@ Add the extension under `[project.markdown_extensions]` in `zensical.toml`:
 }
 ```
 
+## Social card { #social-card }
+
+Every page needs an `og:image` for link previews. Set one explicitly:
+
+```toml
+"easeo.contrib.zensical" = {
+  canonical_host = "example.com",
+  public_base_url = "https://example.com/",
+  default_og_image = "https://example.com/assets/og-image.png",
+  default_og_image_width = 1200,
+  default_og_image_height = 630,
+  default_og_image_alt = "Example",
+}
+```
+
+If `default_og_image` is not set, the extension **autodetects** a conventional
+social card under the docs directory and uses the first one that exists:
+
+```
+assets/og-image.png        assets/social-card.png     assets/social.png
+assets/banner.png          assets/images/og-image.png assets/images/social.png
+overrides/og-image.png     overrides/banner.png       og-image.png
+```
+
+Detection resolves PNG dimensions automatically. When nothing is configured or
+found, the build emits a single warning explaining how to fix it, so a
+missing preview image never ships silently.
+
+Disable either behavior with `og_image_autodetect = false` or
+`og_image_warn = false`.
+
+## Site search
+
+For the homepage `WebSite` schema, set a search URL template to add a
+`SearchAction`. Use `{search_term_string}` as the placeholder:
+
+```toml
+"easeo.contrib.zensical" = {
+  canonical_host = "example.com",
+  public_base_url = "https://example.com/",
+  search_url_template = "https://example.com/?q={search_term_string}",
+}
+```
+
+Without a template, no `SearchAction` is emitted, because a search action that
+points at a non-existent endpoint does more harm than good.
+
+## Validation warnings
+
+Set `emit_warnings = true` to surface validation issues as Python warnings
+during the build. Each issue is reported with its rule id (for example
+`EASEO108` for a missing Open Graph image). The full rule list is in
+[Validation](../concepts/validation.md).
+
 ## Inject into the head { #inject }
 
 The extension sets `page.meta["_seo_head"]` with the rendered tags. Emit it in
