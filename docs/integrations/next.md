@@ -1,5 +1,6 @@
 ---
 title: "Next.js"
+description: "Turn an easeo payload into a native Next.js Metadata object."
 ---
 
 # Next.js { #nextjs }
