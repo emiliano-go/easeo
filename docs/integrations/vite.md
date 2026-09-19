@@ -1,5 +1,6 @@
 ---
 title: "Vite"
+description: "Inject SEO tags into built HTML with the easeo Vite plugin."
 ---
 
 # Vite { #vite }
