@@ -30,7 +30,7 @@ from typing import Any
 from markdown import Extension
 from markdown.preprocessors import Preprocessor
 
-from easeo import SEOConfig, SEOEntity, build_seo_payload
+from easeo import SEOConfig, SEOEntity, SEOOverrides, build_seo_payload
 from easeo._easeo_native import ConfigurationError, SEOImage, URLPolicy
 
 try:
@@ -47,6 +47,36 @@ except (ImportError, AttributeError):
 
 
 _HEADING_RE = re.compile(r"^#\s+(.+)", re.MULTILINE)
+
+# Conventional social-card locations, relative to the docs directory. The
+# extension uses the first one that exists when no default_og_image is set.
+_OG_IMAGE_CANDIDATES = (
+    "assets/og-image.png",
+    "assets/social-card.png",
+    "assets/social.png",
+    "assets/banner.png",
+    "assets/images/og-image.png",
+    "assets/images/social.png",
+    "overrides/og-image.png",
+    "overrides/banner.png",
+    "og-image.png",
+)
+
+
+def _png_size(path: Path) -> tuple[int, int] | None:
+    """Read width/height from a PNG's IHDR chunk without extra dependencies."""
+    try:
+        with path.open("rb") as handle:
+            header = handle.read(24)
+    except OSError:
+        return None
+    if len(header) < 24 or header[:8] != b"\x89PNG\r\n\x1a\n" or header[12:16] != b"IHDR":
+        return None
+    width = int.from_bytes(header[16:20], "big")
+    height = int.from_bytes(header[20:24], "big")
+    if width <= 0 or height <= 0:
+        return None
+    return width, height
 
 
 def _extract_excerpt(body: str, max_chars: int = 160) -> str:
@@ -75,7 +105,15 @@ def _build_seo_config(**kwargs: Any) -> SEOConfig:
         )
 
     default_og_image = kwargs.get("default_og_image")
-    og_image = SEOImage(url=default_og_image) if default_og_image else None
+    if default_og_image:
+        og_image = SEOImage(
+            url=default_og_image,
+            width=kwargs.get("default_og_image_width"),
+            height=kwargs.get("default_og_image_height"),
+            alt=kwargs.get("default_og_image_alt"),
+        )
+    else:
+        og_image = None
 
     trailing_slash = kwargs.get("trailing_slash", "always")
     url_policy = URLPolicy(
@@ -97,6 +135,8 @@ def _build_seo_config(**kwargs: Any) -> SEOConfig:
         locale=kwargs.get("locale"),
         twitter_site=kwargs.get("twitter_site"),
         auto_generate_schema=kwargs.get("auto_generate_schema", True),
+        emit_warnings=kwargs.get("emit_warnings", False),
+        search_url_template=kwargs.get("search_url_template"),
     )
 
 
@@ -105,10 +145,62 @@ class EaseoPreprocessor(Preprocessor):
 
     name = "easeo"
 
-    def __init__(self, md: Any, seo_config: SEOConfig, debug_dir: str | None) -> None:
+    def __init__(
+        self,
+        md: Any,
+        seo_config: SEOConfig,
+        debug_dir: str | None,
+        *,
+        has_default_og_image: bool = False,
+        og_image_autodetect: bool = True,
+        og_image_warn: bool = True,
+    ) -> None:
         super().__init__(md)
         self.seo_config = seo_config
         self.debug_dir = debug_dir
+        self._has_default_og_image = has_default_og_image
+        self._og_image_autodetect = og_image_autodetect
+        self._og_image_warn = og_image_warn
+        self._og_image: SEOImage | None = None
+        self._og_image_resolved = False
+
+    def _resolve_og_image(self, project_root: str, docs_dir: str) -> SEOImage | None:
+        """Return an autodetected social-card image, or None.
+
+        Looks for a conventional file under the docs directory when no
+        ``default_og_image`` was configured. Warns once when nothing is found.
+        """
+        if self._og_image_resolved:
+            return self._og_image
+        self._og_image_resolved = True
+
+        if self._has_default_og_image or not self._og_image_autodetect:
+            return None
+
+        base = Path(project_root) if project_root else Path.cwd()
+        docs_path = Path(docs_dir) if Path(docs_dir).is_absolute() else base / docs_dir
+
+        for candidate in _OG_IMAGE_CANDIDATES:
+            path = docs_path / candidate
+            if not path.is_file():
+                continue
+            public_base = self.seo_config.to_dict().get("public_base_url") or ""
+            url = f"{public_base.rstrip('/')}/{candidate}"
+            size = _png_size(path)
+            width, height = size if size else (None, None)
+            self._og_image = SEOImage(url=url, width=width, height=height)
+            return self._og_image
+
+        if self._og_image_warn:
+            warnings.warn(
+                "easeo.contrib.zensical: no 'default_og_image' is configured and no "
+                f"conventional social card was found under '{docs_dir}' "
+                f"({', '.join(_OG_IMAGE_CANDIDATES)}). Social shares will have no "
+                "preview image. Set default_og_image in zensical.toml or add "
+                f"{docs_dir}/assets/og-image.png.",
+                stacklevel=2,
+            )
+        return None
 
     def _first_heading(self, lines: list[str]) -> str:
         for line in lines:
@@ -160,7 +252,11 @@ class EaseoPreprocessor(Preprocessor):
             excerpt=description or None,
         )
 
-        payload = build_seo_payload(entity, url, self.seo_config)
+        docs_dir = ctx.config.get("docs_dir") or "docs"
+        og_image = self._resolve_og_image(project_root, docs_dir)
+        overrides = SEOOverrides(og_image=og_image) if og_image is not None else None
+
+        payload = build_seo_payload(entity, url, self.seo_config, overrides)
         if payload is None:
             return lines
 
@@ -195,11 +291,21 @@ class EaseoExtension(Extension):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__()
         self._debug_dir = kwargs.pop("debug_dir", None)
+        self._has_default_og_image = bool(kwargs.get("default_og_image"))
+        self._og_image_autodetect = kwargs.pop("og_image_autodetect", True)
+        self._og_image_warn = kwargs.pop("og_image_warn", True)
         self._seo_config = _build_seo_config(**kwargs)
 
     def extendMarkdown(self, md: Any) -> None:
         md.registerExtension(self)
-        preprocessor = EaseoPreprocessor(md, self._seo_config, self._debug_dir)
+        preprocessor = EaseoPreprocessor(
+            md,
+            self._seo_config,
+            self._debug_dir,
+            has_default_og_image=self._has_default_og_image,
+            og_image_autodetect=self._og_image_autodetect,
+            og_image_warn=self._og_image_warn,
+        )
         md.preprocessors.register(preprocessor, preprocessor.name, 100)
 
 
