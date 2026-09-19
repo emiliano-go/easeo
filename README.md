@@ -481,6 +481,17 @@ zensical serve
 Topics include a tutorial, concepts, guides, an API reference,
 per-framework integrations, and recipes.
 
+To reproduce the exact artifact that CI and Cloudflare Pages deploy (easeo
+installed editable, `llms-full.txt` regenerated, then the build):
+
+```bash
+bash scripts/build_docs.sh     # output in site/
+```
+
+Cloudflare Pages settings: build command `bash scripts/build_docs.sh`, output
+directory `site`, environment variable `PYTHON_VERSION=3.12` (a Rust toolchain
+is required). See `docs/about/deploying-docs.md` for details.
+
 ## Development
 
 ### Prerequisites
