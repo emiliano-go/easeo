@@ -1,5 +1,6 @@
 ---
 title: "SvelteKit"
+description: "Use buildEaseoPayload() and the EaseoHead component in SvelteKit."
 ---
 
 # SvelteKit { #sveltekit }
