@@ -1,5 +1,6 @@
 ---
 title: "Product Page"
+description: "A product page with SKU, price, availability, and a breadcrumb trail."
 ---
 
 # Recipe: Product Page
