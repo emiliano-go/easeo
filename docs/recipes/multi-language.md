@@ -1,5 +1,6 @@
 ---
 title: "Multi Language"
+description: "Locale metadata plus per-language canonical URLs and overrides."
 ---
 
 # Recipe: Multi Language
