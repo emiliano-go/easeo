@@ -1,5 +1,6 @@
 ---
 title: "Examples"
+description: "Runnable Python, JavaScript, and Rust examples for building SEO payloads."
 ---
 
 # Examples { #examples }
