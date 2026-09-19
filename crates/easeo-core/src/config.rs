@@ -94,6 +94,11 @@ pub struct SEOConfig {
     pub twitter_site: Option<String>,
     #[serde(default)]
     pub emit_warnings: bool,
+    /// Optional search URL template for the homepage `WebSite` schema. When
+    /// set, a `SearchAction` is emitted with `{search_term_string}` as the
+    /// placeholder, for example `https://example.com/search?q={search_term_string}`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub search_url_template: Option<String>,
 }
 
 fn default_robots() -> Robots {
@@ -118,7 +123,7 @@ fn default_search_robots() -> Robots {
 
 fn default_schema_type_map() -> BTreeMap<String, Option<String>> {
     let mut map = BTreeMap::new();
-    map.insert("home".to_string(), Some("WebPage".to_string()));
+    map.insert("home".to_string(), Some("WebSite".to_string()));
     map.insert("post".to_string(), Some("Article".to_string()));
     map.insert("page".to_string(), Some("WebPage".to_string()));
     map.insert("video".to_string(), Some("VideoObject".to_string()));
@@ -189,6 +194,7 @@ impl Default for SEOConfig {
             locale_alternate: None,
             twitter_site: None,
             emit_warnings: false,
+            search_url_template: None,
         }
     }
 }
