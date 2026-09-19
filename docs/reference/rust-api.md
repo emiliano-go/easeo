@@ -1,5 +1,6 @@
 ---
 title: "Rust API"
+description: "The easeo-core Rust crate: functions, types, payload methods, and registry."
 ---
 
 # Rust API { #rust-api }
