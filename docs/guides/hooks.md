@@ -1,5 +1,6 @@
 ---
 title: "Hooks"
+description: "Config-scoped hooks that post-process the payload while staying deterministic."
 ---
 
 # Hooks { #hooks }
