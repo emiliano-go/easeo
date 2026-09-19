@@ -3282,15 +3282,33 @@ Both live on the config, so the build stays deterministic and scoped.
 
 ## Custom JSON-LD schemas
 
-`SchemaRegistry.register()` is Rust-only and throws from JavaScript by design. Pass custom JSON-LD per page instead:
+Register a generator for a schema type on the config, or replace the schema for
+a single page with overrides.
 
 ```typescript
-import { buildSeoPayloadWithOverrides } from "@easeo/core";
+import { SchemaRegistry, buildSeoPayload } from "@easeo/core";
 
+const registry = new SchemaRegistry();
+registry.register("Article", (entity, cfg, canonical, title) => ({
+  "@context": "https://schema.org",
+  "@type": "PodcastEpisode",
+  name: title,
+}));
+
+const config = { canonicalHost: "example.com", publicBaseUrl: "https://example.com", schemaRegistry: registry };
+const payload = buildSeoPayload(entity, "/podcast/ep-1", config);
+```
+
+Per-page override:
+
+```typescript
 const payload = buildSeoPayloadWithOverrides(entity, "/podcast/ep-1", config, {
   schemaJsonLd: { "@context": "https://schema.org", "@type": "Podcast", name: "My Podcast" },
 });
 ```
+
+`getSchemaRegistry()` returns a native introspection helper (`has`,
+`listTypes`) only; use the `SchemaRegistry` class to register generators.
 
 ========================================================================
 PAGE: https://easeo.emiliano-go.com/reference/python-api/

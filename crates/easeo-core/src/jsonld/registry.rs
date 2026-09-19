@@ -5,11 +5,15 @@ type SchemaBuilder = Box<dyn Fn(&SchemaContext) -> serde_json::Value + Send + Sy
 
 /// Registry of custom schema builders keyed by schema type.
 ///
-/// **Python/JS limitation**: The Python and Node bindings expose `SchemaRegistry` as a type-name
-/// tracker only — custom Rust closures cannot be registered from Python/JS since their callbacks
-/// are not `Send + Sync`. Use `register()` from Rust only, or register Python/JS via the
-/// pre-built schema builders. YAGNI: if Python/JS custom schemas are needed later, add a
-/// `register_python`/`register_js` variant that stores a `PyObject`/`JsFunction` behind a mutex.
+/// This is the Rust-only registry: builders are closures that must be
+/// `Send + Sync`, so Python and JavaScript callables cannot be stored here.
+///
+/// Python and JavaScript get custom schema support through a registry in
+/// their own layer (`easeo.registry.SchemaRegistry` and the `SchemaRegistry`
+/// class in `@easeo/core`). Those registries store native callables and apply
+/// the generated schema to the built payload, so registration works from all
+/// three languages. The native binding types expose `has` and `list_types`
+/// for introspection only.
 pub struct SchemaRegistry {
     builders: BTreeMap<String, SchemaBuilder>,
 }

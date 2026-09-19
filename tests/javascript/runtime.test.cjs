@@ -145,10 +145,17 @@ describe("@easeo/core runtime", skipOpts, () => {
     assert.throws(() => buildSeoPayload({ entityType: "page" }, 123, config), TypeError);
   });
 
-  it("SchemaRegistry.register throws with guidance (Rust-only)", () => {
-    const { getSchemaRegistry } = loadCore();
-    assert.throws(() => getSchemaRegistry().register("Podcast"), /Rust-only.*schemaJsonLd/s);
-    assert.equal(getSchemaRegistry().has("Podcast"), false);
+  it("exposes a callable SchemaRegistry and native introspection", () => {
+    const { SchemaRegistry, getSchemaRegistry } = loadCore();
+    const registry = new SchemaRegistry();
+    registry.register("Podcast", () => ({ "@type": "Podcast" }));
+    assert.equal(registry.has("Podcast"), true);
+    assert.deepEqual(registry.listTypes(), ["Podcast"]);
+
+    // Native registry is introspection only; no register method remains.
+    const native = getSchemaRegistry();
+    assert.equal(native.register, undefined);
+    assert.equal(native.has("Podcast"), false);
   });
 
   it("validatePayload returns SEOIssue objects", () => {

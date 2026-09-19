@@ -458,18 +458,9 @@ impl SchemaRegistry {
         }
     }
 
-    /// Custom schema builders are Rust-only: Python callables cannot be
-    /// stored in the Rust SchemaRegistry, and the registry is never
-    /// consulted by build_seo_payload. Registering here would silently do
-    /// nothing, so this raises instead of becoming a trap. Pass custom
-    /// JSON-LD per page via SEOOverrides(schema_jsonld={...}).
-    fn register(&self, schema_type: &str, _builder: PyObject) -> PyResult<()> {
-        Err(pyo3::exceptions::PyNotImplementedError::new_err(format!(
-            "custom schema builders are Rust-only and cannot be registered from Python \
-             (attempted to register '{schema_type}'). \
-             Pass custom JSON-LD per page via SEOOverrides(schema_jsonld={{...}})."
-        )))
-    }
+    // Custom schema generators are registered from Python through
+    // `easeo.registry.SchemaRegistry`, which stores callables and applies
+    // them around the build. This native type is introspection only.
 
     fn has(&self, schema_type: &str) -> bool {
         let registry = self.inner.lock().unwrap_or_else(|e| e.into_inner());

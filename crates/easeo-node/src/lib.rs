@@ -888,15 +888,10 @@ pub struct NodeSchemaRegistry;
 
 #[napi]
 impl NodeSchemaRegistry {
-    #[napi]
-    pub fn register(&self, schema_type: String) -> Result<(), napi::Error> {
-        Err(napi::Error::from_reason(format!(
-            "custom schema builders are Rust-only and cannot be registered from JavaScript \
-             (attempted to register '{schema_type}'). \
-             Pass custom JSON-LD per page via overrides: \
-             buildSeoPayloadWithOverrides(entity, route, config, {{ schemaJsonLd: {{ ... }} }})."
-        )))
-    }
+    // Custom schema generators are registered from JavaScript through the
+    // `SchemaRegistry` class exported by `@easeo/core`, which stores
+    // callables and applies them around the build. This native type is
+    // introspection only.
 
     #[napi]
     pub fn has(&self, schema_type: String) -> bool {
