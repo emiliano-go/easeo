@@ -1,5 +1,6 @@
 ---
 title: "Flask"
+description: "Use the easeo Flask context processor and for_entity helper."
 ---
 
 # Flask { #flask }
