@@ -16,12 +16,18 @@ export interface SEOConfig {
   publisherName?: string;
   publisherLogo?: string;
   autoGenerateSchema?: boolean;
+  /** Emit `console.warn` for validation issues during the build. */
   emitWarnings?: boolean;
   defaultRobotsIndex?: boolean;
   defaultRobotsFollow?: boolean;
   searchRobotsIndex?: boolean;
   searchRobotsFollow?: boolean;
   schemaTypeMapJson?: string;
+  /**
+   * Search URL template for the homepage `WebSite` schema. Setting it adds a
+   * `SearchAction`; use `{search_term_string}` as the placeholder.
+   */
+  searchUrlTemplate?: string;
   /** Config-scoped hooks, run after the payload is built. */
   hooks?: HookRegistry;
   /** Config-scoped custom JSON-LD generators. */
