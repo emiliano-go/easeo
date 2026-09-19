@@ -1,5 +1,6 @@
 ---
 title: "FastAPI"
+description: "Use the easeo FastAPI adapter for synchronous and async routes."
 ---
 
 # FastAPI { #fastapi }
