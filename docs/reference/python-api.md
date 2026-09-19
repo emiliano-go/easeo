@@ -1,5 +1,6 @@
 ---
 title: "Python API"
+description: "The easeo Python API: types, functions, payload methods, and adapters."
 ---
 
 # Python API Reference { #python-api-reference }
