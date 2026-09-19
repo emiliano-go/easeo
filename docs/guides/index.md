@@ -1,5 +1,6 @@
 ---
 title: "Guides"
+description: "Task-oriented guides for custom schemas, hooks, contracts, and framework recipes."
 ---
 
 # Guides { #guides }
