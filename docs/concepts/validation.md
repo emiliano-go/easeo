@@ -47,13 +47,14 @@ returns a list of issues. It never throws on ordinary content; it reports.
 
 | Rule | Severity | Checks |
 |---|---|---|
-| `EASEO101` | warning | Title length outside the recommended range |
-| `EASEO102` | warning | Description length outside the recommended range |
-| `EASEO103` | error | Canonical URL is not absolute, or uses a non-HTTP scheme |
-| `EASEO104` | warning | Open Graph image is missing |
-| `EASEO105` | warning | Open Graph image URL is not absolute |
-| `EASEO106` | warning | Robots directive is malformed |
-| `EASEO107` | info | No JSON-LD schema was generated |
+| `EASEO101` | warning | Title is missing or still the default `"Untitled"` |
+| `EASEO102` | warning | Title is longer than 60 characters |
+| `EASEO103` | warning | Meta description is missing |
+| `EASEO104` | warning | Meta description is longer than 160 characters |
+| `EASEO105` | warning | Canonical URL is not absolute |
+| `EASEO106` | warning | Open Graph image URL is not absolute |
+| `EASEO107` | warning | Robots directive is not a known directive |
+| `EASEO108` | warning | Open Graph image is missing (set `default_og_image` or an entity image) |
 
 ## Emitting warnings automatically { #emit }
 
