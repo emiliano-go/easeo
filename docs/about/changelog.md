@@ -1,5 +1,6 @@
 ---
 title: "Changelog"
+description: "Release notes for easeo, from the initial 0.1.0 release onward."
 ---
 
 # Changelog { #changelog }
