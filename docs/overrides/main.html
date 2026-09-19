@@ -1,7 +1,14 @@
 {% extends "base.html" %}
 
-{% block extrahead %}
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+{#
+  When easeo generates the head, it owns the <title> too, so suppress the
+  theme's title block to avoid emitting two of them. Without a generated head
+  (for example when easeo is not installed) fall back to the theme default.
+#}
+{% block htmltitle %}
+{% if not (page.meta and page.meta._seo_head) %}
+{{ super() }}
+{% endif %}
 {% endblock %}
 
 {% block site_meta %}
