@@ -135,6 +135,8 @@ SEOPayload
   recipes, migration.
 - [Reference](reference/python-api.md): Python, JavaScript, and Rust APIs.
 - [Integrations](integrations/index.md): per-framework setup.
+- [Examples](examples/index.md): a simple and a complex example for every
+  integration.
 - [Recipes](recipes/index.md): real-world patterns.
 
 ## Repository layout { #repository-layout }

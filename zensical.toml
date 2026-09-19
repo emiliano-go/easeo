@@ -133,7 +133,28 @@ name = "@easeo/core on npm"
 ]
 
 [[project.nav]]
-"Examples" = "examples.md"
+"Examples" = [
+    "examples/index.md",
+    { "Core" = [
+        { "Python" = "examples/core-python.md" },
+        { "JavaScript" = "examples/core-javascript.md" },
+        { "Rust" = "examples/core-rust.md" },
+    ] },
+    { "JavaScript frameworks" = [
+        { "Next.js" = "examples/next.md" },
+        { "Astro" = "examples/astro.md" },
+        { "Vite" = "examples/vite.md" },
+        { "Nuxt" = "examples/nuxt.md" },
+        { "SvelteKit" = "examples/sveltekit.md" },
+        { "React" = "examples/react.md" },
+    ] },
+    { "Python frameworks" = [
+        { "FastAPI" = "examples/fastapi.md" },
+        { "Django" = "examples/django.md" },
+        { "Flask" = "examples/flask.md" },
+        { "Zensical" = "examples/zensical.md" },
+    ] },
+]
 
 [[project.nav]]
 "About" = [

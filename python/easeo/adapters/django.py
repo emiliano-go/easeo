@@ -13,8 +13,48 @@ from django.utils.safestring import mark_safe
 register = template.Library()
 
 
+def _image(value: Any):
+    """Accept an SEOImage, a URL string, or a mapping for default_og_image."""
+    from easeo import SEOImage
+
+    if value is None or isinstance(value, SEOImage):
+        return value
+    if isinstance(value, str):
+        return SEOImage(url=value)
+    if isinstance(value, dict):
+        return SEOImage(**value)
+    raise ValueError("EASEO['default_og_image'] must be a URL, dict, or SEOImage")
+
+
+def _robots(value: Any):
+    """Accept a Robots instance or a mapping such as {"index": True}."""
+    from easeo import Robots
+
+    if value is None or isinstance(value, Robots):
+        return value
+    if isinstance(value, dict):
+        return Robots(**value)
+    raise ValueError("EASEO robots settings must be a dict or Robots instance")
+
+
+def _policy(value: Any):
+    """Accept a URLPolicy instance or a mapping of policy fields."""
+    from easeo import URLPolicy
+
+    if value is None or isinstance(value, URLPolicy):
+        return value
+    if isinstance(value, dict):
+        return URLPolicy(**value)
+    raise ValueError("EASEO['url_policy'] must be a dict or URLPolicy instance")
+
+
 def _get_config():
-    """Get SEO config from Django settings."""
+    """Build an SEOConfig from the ``EASEO`` Django setting.
+
+    Every ``SEOConfig`` field is supported. ``default_og_image`` accepts a URL
+    string, a mapping, or an ``SEOImage``. ``url_policy``, ``default_robots``
+    and ``search_robots`` accept mappings or their value types.
+    """
     from easeo import SEOConfig
 
     config_data = getattr(settings, "EASEO", None)
@@ -30,6 +70,18 @@ def _get_config():
         public_base_url=config_data.get("public_base_url", "http://localhost"),
         site_name=config_data.get("site_name"),
         title_template=config_data.get("title_template"),
+        url_policy=_policy(config_data.get("url_policy")),
+        default_robots=_robots(config_data.get("default_robots")),
+        search_robots=_robots(config_data.get("search_robots")),
+        default_og_image=_image(config_data.get("default_og_image")),
+        publisher_name=config_data.get("publisher_name"),
+        publisher_logo=config_data.get("publisher_logo"),
+        locale=config_data.get("locale"),
+        locale_alternate=config_data.get("locale_alternate"),
+        twitter_site=config_data.get("twitter_site"),
+        auto_generate_schema=config_data.get("auto_generate_schema", True),
+        emit_warnings=config_data.get("emit_warnings", False),
+        search_url_template=config_data.get("search_url_template"),
     )
 
 

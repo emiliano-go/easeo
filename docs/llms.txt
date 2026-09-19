@@ -63,7 +63,20 @@
 - [Custom Schema](https://easeo.emiliano-go.com/recipes/custom-schema/): SchemaRegistry and hooks
 
 ## Examples
-- [Examples](https://easeo.emiliano-go.com/examples/): Runnable Python, JavaScript, and Rust snippets
+- [Examples index](https://easeo.emiliano-go.com/examples/): A simple and a complex example for every integration
+- [Python](https://easeo.emiliano-go.com/examples/core-python/): Config, overrides, factories, async, hooks, registries, contracts
+- [JavaScript](https://easeo.emiliano-go.com/examples/core-javascript/): Payloads, serialization, hooks, registries, TypeScript
+- [Rust](https://easeo.emiliano-go.com/examples/core-rust/): easeo-core, schema registry, hashing
+- [Next.js](https://easeo.emiliano-go.com/examples/next/): Static and dynamic metadata plus route handlers
+- [Astro](https://easeo.emiliano-go.com/examples/astro/): Content collections and contract emission
+- [Vite](https://easeo.emiliano-go.com/examples/vite/): Single-page and multi-page builds
+- [Nuxt](https://easeo.emiliano-go.com/examples/nuxt/): Composable, dynamic routes, reuse the payload
+- [SvelteKit](https://easeo.emiliano-go.com/examples/sveltekit/): Load functions, layouts, head component
+- [React](https://easeo.emiliano-go.com/examples/react/): Router-driven head and server rendering
+- [FastAPI](https://easeo.emiliano-go.com/examples/fastapi/): JSON, templates, async, ETag caching
+- [Django](https://easeo.emiliano-go.com/examples/django/): Settings, tags, model mapping, ETag views
+- [Flask](https://easeo.emiliano-go.com/examples/flask/): Factory, blueprints, JSON API, ETag
+- [Zensical](https://easeo.emiliano-go.com/examples/zensical/): Full config, social card, search, validation
 
 ## About
 - [Comparison](https://easeo.emiliano-go.com/about/comparison/): Manual SEO vs easeo
