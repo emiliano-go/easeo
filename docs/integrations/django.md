@@ -1,5 +1,6 @@
 ---
 title: "Django"
+description: "Use easeo with Django template tags and settings-based configuration."
 ---
 
 # Django { #django }
