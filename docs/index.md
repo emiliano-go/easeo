@@ -1,6 +1,6 @@
 ---
 title: easeo documentation
-description: Deterministic SEO metadata generation for content platforms. Rust core with Python and JavaScript/TypeScript bindings.
+description: "Deterministic SEO metadata generation for content platforms. Rust core with Python and JavaScript/TypeScript bindings."
 ---
 
 <div align="center">
