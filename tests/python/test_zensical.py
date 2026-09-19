@@ -3,10 +3,22 @@
 import sys
 import json
 import types
+import warnings
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+
+def _fake_png(width: int, height: int) -> bytes:
+    """Minimal bytes with a valid PNG signature and IHDR for _png_size."""
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + (13).to_bytes(4, "big")
+        + b"IHDR"
+        + width.to_bytes(4, "big")
+        + height.to_bytes(4, "big")
+    )
 
 
 # -- Proper module-level mocks for external deps --
@@ -115,6 +127,31 @@ class TestBuildSeoConfig:
         d = config.to_dict()
         assert d["site_name"] == "Site"
         assert d["auto_generate_schema"] is False
+
+    def test_og_image_dimensions_and_alt(self):
+        config = _build_seo_config(
+            canonical_host="example.com",
+            public_base_url="https://example.com",
+            default_og_image="https://example.com/og.png",
+            default_og_image_width=1200,
+            default_og_image_height=630,
+            default_og_image_alt="Example card",
+        )
+        image = config.to_dict()["default_og_image"]
+        assert image["url"] == "https://example.com/og.png"
+        assert image["width"] == 1200
+        assert image["height"] == 630
+        assert image["alt"] == "Example card"
+
+    def test_search_url_template_passthrough(self):
+        config = _build_seo_config(
+            canonical_host="example.com",
+            public_base_url="https://example.com",
+            search_url_template="https://example.com/?q={search_term_string}",
+        )
+        assert config.to_dict()["search_url_template"] == (
+            "https://example.com/?q={search_term_string}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -314,3 +351,111 @@ def test_preprocessor_run_payload_none_returns_lines():
     with patch("easeo.contrib.zensical.build_seo_payload", return_value=None):
         lines = ["body"]
         assert pre.run(lines) is lines
+
+
+# ---------------------------------------------------------------------------
+# Open Graph image autodetect + warning
+# ---------------------------------------------------------------------------
+
+class TestOgImageHandling:
+    def _pre(self, seo_config, *, autodetect=True, warn=True, has_default=False):
+        pre = EaseoPreprocessor(
+            None,
+            seo_config,
+            None,
+            has_default_og_image=has_default,
+            og_image_autodetect=autodetect,
+            og_image_warn=warn,
+        )
+        pre.md = MagicMock()
+        return pre
+
+    def _ctx(self, tmp_path, *, docs_dir="docs", meta=None):
+        ctx = _FakeContext(
+            page=_FakePage(url="/p", path="p", meta=meta or {"title": "Page"}),
+            config={"root_dir": str(tmp_path), "docs_dir": docs_dir},
+        )
+        zmod.ContextPreprocessor.from_markdown = staticmethod(lambda md: ctx)
+        return ctx
+
+    def test_autodetect_uses_conventional_asset(self, tmp_path):
+        assets = tmp_path / "docs" / "assets"
+        assets.mkdir(parents=True)
+        (assets / "og-image.png").write_bytes(_fake_png(1200, 630))
+        config = _build_seo_config(
+            canonical_host="ex.com", public_base_url="https://ex.com"
+        )
+        pre = self._pre(config)
+        ctx = self._ctx(tmp_path)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            pre.run(["body"])
+        head = ctx.page.meta["_seo_head"]
+        assert "https://ex.com/assets/og-image.png" in head
+        assert 'og:image:width" content="1200' in head
+        assert 'og:image:height" content="630' in head
+
+    def test_warns_when_missing(self, tmp_path):
+        (tmp_path / "docs").mkdir()
+        config = _build_seo_config(
+            canonical_host="ex.com", public_base_url="https://ex.com"
+        )
+        pre = self._pre(config)
+        self._ctx(tmp_path)
+        with pytest.warns(UserWarning, match="default_og_image"):
+            pre.run(["body"])
+
+    def test_explicit_config_wins_over_autodetect(self, tmp_path):
+        assets = tmp_path / "docs" / "assets"
+        assets.mkdir(parents=True)
+        (assets / "og-image.png").write_bytes(_fake_png(1200, 630))
+        config = _build_seo_config(
+            canonical_host="ex.com",
+            public_base_url="https://ex.com",
+            default_og_image="https://ex.com/custom.png",
+        )
+        pre = self._pre(config, has_default=True)
+        ctx = self._ctx(tmp_path)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            pre.run(["body"])
+        head = ctx.page.meta["_seo_head"]
+        assert "https://ex.com/custom.png" in head
+        assert "assets/og-image.png" not in head
+
+    def test_warning_can_be_disabled(self, tmp_path):
+        (tmp_path / "docs").mkdir()
+        config = _build_seo_config(
+            canonical_host="ex.com", public_base_url="https://ex.com"
+        )
+        pre = self._pre(config, warn=False)
+        self._ctx(tmp_path)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            pre.run(["body"])
+
+    def test_autodetect_can_be_disabled(self, tmp_path):
+        assets = tmp_path / "docs" / "assets"
+        assets.mkdir(parents=True)
+        (assets / "og-image.png").write_bytes(_fake_png(1200, 630))
+        config = _build_seo_config(
+            canonical_host="ex.com", public_base_url="https://ex.com"
+        )
+        pre = self._pre(config, autodetect=False, warn=False)
+        ctx = self._ctx(tmp_path)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            pre.run(["body"])
+        assert "assets/og-image.png" not in ctx.page.meta["_seo_head"]
+
+
+class TestPngSize:
+    def test_reads_dimensions(self, tmp_path):
+        path = tmp_path / "card.png"
+        path.write_bytes(_fake_png(800, 418))
+        assert zmod._png_size(path) == (800, 418)
+
+    def test_non_png_returns_none(self, tmp_path):
+        path = tmp_path / "card.txt"
+        path.write_bytes(b"not a png at all")
+        assert zmod._png_size(path) is None
