@@ -1,5 +1,6 @@
 ---
 title: "Blog Post"
+description: "A published article with a hero image, author, and breadcrumbs."
 ---
 
 # Recipe: Blog Post
