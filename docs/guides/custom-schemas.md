@@ -1,5 +1,6 @@
 ---
 title: "Custom JSON-LD"
+description: "Control structured data with per-page overrides, registered generators, and hooks."
 ---
 
 # Custom JSON-LD { #custom-jsonld }
