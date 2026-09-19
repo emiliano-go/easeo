@@ -1,5 +1,6 @@
 ---
 title: "Contracts"
+description: "Build a machine-readable SEO contract and add rules for specific routes."
 ---
 
 # Contracts { #contracts }
