@@ -1,5 +1,6 @@
 ---
 title: "Migration from seoslug"
+description: "The API mapping from seoslug to easeo and what changed in the rewrite."
 ---
 
 # Migration from seoslug { #migration-from-seoslug }
