@@ -139,6 +139,7 @@ name = "@easeo/core on npm"
 "About" = [
     { "Why easeo" = "about/why-easeo.md" },
     { "Comparison" = "about/comparison.md" },
+    { "Deploying the Docs" = "about/deploying-docs.md" },
     { "Changelog" = "about/changelog.md" },
     { "Contributing" = "about/contributing.md" },
 ]
