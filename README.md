@@ -140,8 +140,8 @@ route, same config, same payload everywhere.
   organization, local_business, faq, other
 - **URL normalization**: HTTPS enforcement, lowercase paths, trailing slash
   control, duplicate slash collapse, tracking parameter removal
-- **JSON-LD schemas**: Article, Product, Organization, LocalBusiness, FAQPage,
-  WebPage, BreadcrumbList, plus custom schemas via registry
+- **JSON-LD schemas**: WebSite, WebPage, Article, Product, Organization,
+  LocalBusiness, FAQPage, BreadcrumbList, plus custom schemas via registry
 - **Open Graph**: full og:type, title, description, image, locale, audio, video
 - **Twitter Cards**: summary_large_image by default, with image alt, site,
   creator
@@ -215,6 +215,7 @@ Site-wide configuration.
 | `auto_generate_schema` | `bool` | Auto-generate JSON-LD from entity type (default: `True`) |
 | `emit_warnings` | `bool` | Collect validation warnings (default: `False`) |
 | `schema_type_map` | `dict \| None` | Override entity-type to schema.org type mapping |
+| `search_url_template` | `str \| None` | Search URL for the homepage `WebSite` `SearchAction` |
 | `hooks` | `HookRegistry \| None` | Config-scoped post-processing |
 | `schema_registry` | `SchemaRegistry \| None` | Config-scoped JSON-LD generators |
 
