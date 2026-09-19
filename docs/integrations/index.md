@@ -1,5 +1,6 @@
 ---
 title: "Integrations"
+description: "Adapters that wire easeo into JavaScript and Python frameworks."
 ---
 
 # Integrations { #integrations }
