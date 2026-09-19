@@ -1,5 +1,6 @@
 ---
 title: "Concepts"
+description: "How easeo is put together and why, from payloads to URL normalization."
 ---
 
 # Concepts { #concepts }
