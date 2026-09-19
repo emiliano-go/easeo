@@ -26,8 +26,9 @@ types, defaults, and validation rules.
 | `locale_alternate` | `list[str] \| None` | `None` | `og:locale:alternate` values |
 | `twitter_site` | `str \| None` | `None` | `twitter:site` handle |
 | `auto_generate_schema` | `bool` | `True` | Generate JSON-LD from the entity type |
-| `emit_warnings` | `bool` | `False` | Emit validation warnings |
+| `emit_warnings` | `bool` | `False` | Emit Python/`console` warnings for validation issues |
 | `schema_type_map` | `dict \| None` | built-in | Override the entity-type to schema-type map |
+| `search_url_template` | `str \| None` | `None` | Search URL for the homepage `WebSite` `SearchAction`, e.g. `"https://example.com/?q={search_term_string}"` |
 | `hooks` | `HookRegistry \| None` | `None` | Config-scoped post-processing |
 | `schema_registry` | `SchemaRegistry \| None` | `None` | Config-scoped JSON-LD generators |
 
@@ -35,7 +36,7 @@ The JavaScript field names are the camelCase equivalents: `canonicalHost`,
 `publicBaseUrl`, `urlPolicy`, `siteName`, `titleTemplate`, `defaultRobots`,
 `searchRobots`, `defaultOgImage`, `publisherName`, `publisherLogo`,
 `localeAlternate`, `twitterSite`, `autoGenerateSchema`, `emitWarnings`,
-`schemaTypeMap`, `hooks`, `schemaRegistry`.
+`schemaTypeMap`, `searchUrlTemplate`, `hooks`, `schemaRegistry`.
 
 ## Validation rules { #validation }
 
