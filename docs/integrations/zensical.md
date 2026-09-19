@@ -1,5 +1,6 @@
 ---
 title: "Zensical"
+description: "Generate per-page SEO metadata for a Zensical docs site with easeo."
 ---
 
 # Zensical { #zensical }
