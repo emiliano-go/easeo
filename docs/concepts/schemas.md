@@ -14,7 +14,8 @@ or extend it. The result is exposed as `schema_jsonld` (Python) or
 | Schema | Built from | Key fields |
 |---|---|---|
 | `Article` | `post`, `video` | headline, dates, author, publisher |
-| `WebPage` | `home`, `page` | name, url, description |
+| `WebSite` | `home` | name, url, description, optional `SearchAction` |
+| `WebPage` | `page` | name, url, description |
 | `VideoObject` | `video` | name, url, description |
 | `CollectionPage` | `taxonomy` | name, url |
 | `SearchResultsPage` | `search` | name, url |
