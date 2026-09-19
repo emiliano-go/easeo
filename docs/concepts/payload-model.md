@@ -1,5 +1,6 @@
 ---
 title: "Payload Model"
+description: "The SEOPayload structure, methods, render order, and escaping rules."
 ---
 
 # Payload Model { #payload-model }
