@@ -2,6 +2,7 @@
 equality, hooks, factories, async building, and the exception hierarchy."""
 
 import asyncio
+import warnings
 
 import pytest
 
@@ -256,3 +257,73 @@ class TestExceptionHierarchy:
     def test_bad_config_caught_as_easeo_error(self):
         with pytest.raises(EaseoError):
             SEOConfig(canonical_host="", public_base_url="https://example.com")
+
+
+# ── Validation warnings ──────────────────────────────────────────────
+
+
+class TestEmitWarnings:
+    def _config(self, **kwargs):
+        return SEOConfig(
+            canonical_host="example.com",
+            public_base_url="https://example.com",
+            **kwargs,
+        )
+
+    def test_emits_missing_og_image_warning(self):
+        entity = SEOEntity(entity_type="page", title="T", excerpt="D")
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            build_seo_payload(entity, "/x", self._config(emit_warnings=True))
+        messages = [str(w.message) for w in caught]
+        assert any("EASEO108" in m for m in messages)
+
+    def test_no_warning_when_disabled(self):
+        entity = SEOEntity(entity_type="page", title="T", excerpt="D")
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            build_seo_payload(entity, "/x", self._config(emit_warnings=False))
+        assert caught == []
+
+    def test_no_missing_image_warning_when_configured(self):
+        from easeo import SEOImage
+
+        entity = SEOEntity(entity_type="page", title="T", excerpt="D")
+        config = self._config(
+            emit_warnings=True,
+            default_og_image=SEOImage(url="https://example.com/og.png"),
+        )
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            build_seo_payload(entity, "/x", config)
+        assert not any("EASEO108" in str(w.message) for w in caught)
+
+
+# ── Homepage WebSite schema ──────────────────────────────────────────
+
+
+class TestHomeSchema:
+    def test_home_entity_maps_to_website(self):
+        config = SEOConfig(
+            canonical_host="example.com", public_base_url="https://example.com"
+        )
+        payload = build_seo_payload(SEOEntity(entity_type="home", title="Home"), "/", config)
+        assert payload.schema_jsonld["@type"] == "WebSite"
+
+    def test_search_action_emitted_when_template_set(self):
+        config = SEOConfig(
+            canonical_host="example.com",
+            public_base_url="https://example.com",
+            search_url_template="https://example.com/?q={search_term_string}",
+        )
+        payload = build_seo_payload(SEOEntity(entity_type="home", title="Home"), "/", config)
+        action = payload.schema_jsonld["potentialAction"]
+        assert action["@type"] == "SearchAction"
+        assert action["target"]["urlTemplate"] == "https://example.com/?q={search_term_string}"
+
+    def test_no_search_action_without_template(self):
+        config = SEOConfig(
+            canonical_host="example.com", public_base_url="https://example.com"
+        )
+        payload = build_seo_payload(SEOEntity(entity_type="home", title="Home"), "/", config)
+        assert "potentialAction" not in payload.schema_jsonld
