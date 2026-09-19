@@ -804,7 +804,7 @@ impl Clone for SEOConfig {
 #[pymethods]
 impl SEOConfig {
     #[new]
-    #[pyo3(signature = (canonical_host, public_base_url, *, url_policy=None, default_robots=None, default_og_image=None, site_name=None, title_template=None, search_robots=None, auto_generate_schema=true, publisher_name=None, publisher_logo=None, locale=None, locale_alternate=None, twitter_site=None, emit_warnings=false, schema_type_map=None, hooks=None, schema_registry=None))]
+    #[pyo3(signature = (canonical_host, public_base_url, *, url_policy=None, default_robots=None, default_og_image=None, site_name=None, title_template=None, search_robots=None, auto_generate_schema=true, publisher_name=None, publisher_logo=None, locale=None, locale_alternate=None, twitter_site=None, emit_warnings=false, schema_type_map=None, search_url_template=None, hooks=None, schema_registry=None))]
     fn new(
         canonical_host: String,
         public_base_url: String,
@@ -822,6 +822,7 @@ impl SEOConfig {
         twitter_site: Option<String>,
         emit_warnings: bool,
         schema_type_map: Option<Vec<(String, String)>>,
+        search_url_template: Option<String>,
         hooks: Option<PyObject>,
         schema_registry: Option<PyObject>,
     ) -> PyResult<Self> {
@@ -859,6 +860,7 @@ impl SEOConfig {
             locale_alternate,
             twitter_site,
             emit_warnings,
+            search_url_template,
         };
         config.validate().map_err(convert_core_error)?;
         Ok(Self {
@@ -1513,6 +1515,32 @@ fn apply_schema_registry(
     Ok(updated)
 }
 
+/// Emit Python warnings for validation issues when `emit_warnings` is set.
+fn maybe_emit_warnings(
+    py: Python<'_>,
+    payload: &core::SEOPayload,
+    config: &SEOConfig,
+) -> PyResult<()> {
+    if !config.inner.emit_warnings {
+        return Ok(());
+    }
+    let issues = core::validate_payload(payload);
+    if issues.is_empty() {
+        return Ok(());
+    }
+    let warnings = py.import("warnings")?;
+    for issue in issues {
+        let location = issue
+            .url
+            .as_deref()
+            .map(|u| format!(" ({u})"))
+            .unwrap_or_default();
+        let message = format!("[{}] {}{}", issue.rule_id, issue.message, location);
+        warnings.call_method1("warn", (message,))?;
+    }
+    Ok(())
+}
+
 #[pyfunction]
 #[pyo3(signature = (entity, route, config, overrides=None))]
 fn build_seo_payload(
@@ -1528,6 +1556,7 @@ fn build_seo_payload(
         .map_err(convert_core_error)?;
     let payload = apply_schema_registry(py, payload, entity, config)?;
     let payload = apply_hooks(py, payload, entity, config)?;
+    maybe_emit_warnings(py, &payload, config)?;
     Ok(SEOPayload { inner: payload })
 }
 
@@ -1548,6 +1577,7 @@ fn build_seo_payload_with_overrides(
     .map_err(convert_core_error)?;
     let payload = apply_schema_registry(py, payload, entity, config)?;
     let payload = apply_hooks(py, payload, entity, config)?;
+    maybe_emit_warnings(py, &payload, config)?;
     Ok(SEOPayload { inner: payload })
 }
 
