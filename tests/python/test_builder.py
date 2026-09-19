@@ -1,10 +1,5 @@
 """Tests for easeo.SEOEntityBuilder (fluent entity construction)."""
 
-import sys
-import os
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'python'))
-
 import pytest
 
 
