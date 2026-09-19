@@ -1,5 +1,6 @@
 ---
 title: "Validation"
+description: "The built-in validation rules, issue shape, and how to surface warnings."
 ---
 
 # Validation { #validation }
