@@ -1,5 +1,6 @@
 ---
 title: "Determinism"
+description: "The determinism guarantee: same inputs, same bytes, and what it enables."
 ---
 
 # Determinism { #determinism }
