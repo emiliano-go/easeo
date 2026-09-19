@@ -1,5 +1,6 @@
 ---
 title: "Entity Model"
+description: "The SEOEntity fields, entity types, and which output each field feeds."
 ---
 
 # Entity Model { #entity-model }
