@@ -1,5 +1,6 @@
 ---
 title: "Custom Schema"
+description: "Two ways to control structured data: per-page overrides and registered generators."
 ---
 
 # Recipe: Custom JSON-LD
