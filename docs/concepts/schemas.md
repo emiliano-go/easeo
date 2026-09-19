@@ -1,5 +1,6 @@
 ---
 title: "JSON-LD Schemas"
+description: "Built-in JSON-LD schemas, breadcrumbs, and three ways to customize them."
 ---
 
 # JSON-LD Schemas { #schemas }
