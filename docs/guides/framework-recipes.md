@@ -1,5 +1,6 @@
 ---
 title: "Framework Recipes"
+description: "Copy-paste integration patterns for JavaScript and Python frameworks."
 ---
 
 # Framework Recipes { #framework-recipes }
