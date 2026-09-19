@@ -1,5 +1,6 @@
 ---
 title: "Fallback and Overrides"
+description: "Control which value wins with config defaults, entity fields, and overrides."
 ---
 
 # Fallback and Overrides { #fallback-and-overrides }
