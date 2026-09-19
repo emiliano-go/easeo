@@ -67,5 +67,6 @@
 
 ## About
 - [Comparison](https://easeo.emiliano-go.com/about/comparison/): Manual SEO vs easeo
+- [Deploying the Docs](https://easeo.emiliano-go.com/about/deploying-docs/): Build command and Cloudflare Pages settings
 - [Changelog](https://easeo.emiliano-go.com/about/changelog/): Release notes
 - [Contributing](https://easeo.emiliano-go.com/about/contributing/): Build, test, conventions
