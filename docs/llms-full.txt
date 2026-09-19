@@ -769,7 +769,8 @@ or extend it. The result is exposed as `schema_jsonld` (Python) or
 | Schema | Built from | Key fields |
 |---|---|---|
 | `Article` | `post`, `video` | headline, dates, author, publisher |
-| `WebPage` | `home`, `page` | name, url, description |
+| `WebSite` | `home` | name, url, description, optional `SearchAction` |
+| `WebPage` | `page` | name, url, description |
 | `VideoObject` | `video` | name, url, description |
 | `CollectionPage` | `taxonomy` | name, url |
 | `SearchResultsPage` | `search` | name, url |
@@ -1003,13 +1004,14 @@ returns a list of issues. It never throws on ordinary content; it reports.
 
 | Rule | Severity | Checks |
 |---|---|---|
-| `EASEO101` | warning | Title length outside the recommended range |
-| `EASEO102` | warning | Description length outside the recommended range |
-| `EASEO103` | error | Canonical URL is not absolute, or uses a non-HTTP scheme |
-| `EASEO104` | warning | Open Graph image is missing |
-| `EASEO105` | warning | Open Graph image URL is not absolute |
-| `EASEO106` | warning | Robots directive is malformed |
-| `EASEO107` | info | No JSON-LD schema was generated |
+| `EASEO101` | warning | Title is missing or still the default `"Untitled"` |
+| `EASEO102` | warning | Title is longer than 60 characters |
+| `EASEO103` | warning | Meta description is missing |
+| `EASEO104` | warning | Meta description is longer than 160 characters |
+| `EASEO105` | warning | Canonical URL is not absolute |
+| `EASEO106` | warning | Open Graph image URL is not absolute |
+| `EASEO107` | warning | Robots directive is not a known directive |
+| `EASEO108` | warning | Open Graph image is missing (set `default_og_image` or an entity image) |
 
 ## Emitting warnings automatically { #emit }
 
@@ -2578,6 +2580,60 @@ Add the extension under `[project.markdown_extensions]` in `zensical.toml`:
 }
 ```
 
+## Social card { #social-card }
+
+Every page needs an `og:image` for link previews. Set one explicitly:
+
+```toml
+"easeo.contrib.zensical" = {
+  canonical_host = "example.com",
+  public_base_url = "https://example.com/",
+  default_og_image = "https://example.com/assets/og-image.png",
+  default_og_image_width = 1200,
+  default_og_image_height = 630,
+  default_og_image_alt = "Example",
+}
+```
+
+If `default_og_image` is not set, the extension **autodetects** a conventional
+social card under the docs directory and uses the first one that exists:
+
+```
+assets/og-image.png        assets/social-card.png     assets/social.png
+assets/banner.png          assets/images/og-image.png assets/images/social.png
+overrides/og-image.png     overrides/banner.png       og-image.png
+```
+
+Detection resolves PNG dimensions automatically. When nothing is configured or
+found, the build emits a single warning explaining how to fix it, so a
+missing preview image never ships silently.
+
+Disable either behavior with `og_image_autodetect = false` or
+`og_image_warn = false`.
+
+## Site search
+
+For the homepage `WebSite` schema, set a search URL template to add a
+`SearchAction`. Use `{search_term_string}` as the placeholder:
+
+```toml
+"easeo.contrib.zensical" = {
+  canonical_host = "example.com",
+  public_base_url = "https://example.com/",
+  search_url_template = "https://example.com/?q={search_term_string}",
+}
+```
+
+Without a template, no `SearchAction` is emitted, because a search action that
+points at a non-existent endpoint does more harm than good.
+
+## Validation warnings
+
+Set `emit_warnings = true` to surface validation issues as Python warnings
+during the build. Each issue is reported with its rule id (for example
+`EASEO108` for a missing Open Graph image). The full rule list is in
+[Validation](../concepts/validation.md).
+
 ## Inject into the head { #inject }
 
 The extension sets `page.meta["_seo_head"]` with the rendered tags. Emit it in
@@ -3629,8 +3685,9 @@ types, defaults, and validation rules.
 | `locale_alternate` | `list[str] \| None` | `None` | `og:locale:alternate` values |
 | `twitter_site` | `str \| None` | `None` | `twitter:site` handle |
 | `auto_generate_schema` | `bool` | `True` | Generate JSON-LD from the entity type |
-| `emit_warnings` | `bool` | `False` | Emit validation warnings |
+| `emit_warnings` | `bool` | `False` | Emit Python/`console` warnings for validation issues |
 | `schema_type_map` | `dict \| None` | built-in | Override the entity-type to schema-type map |
+| `search_url_template` | `str \| None` | `None` | Search URL for the homepage `WebSite` `SearchAction`, e.g. `"https://example.com/?q={search_term_string}"` |
 | `hooks` | `HookRegistry \| None` | `None` | Config-scoped post-processing |
 | `schema_registry` | `SchemaRegistry \| None` | `None` | Config-scoped JSON-LD generators |
 
@@ -3638,7 +3695,7 @@ The JavaScript field names are the camelCase equivalents: `canonicalHost`,
 `publicBaseUrl`, `urlPolicy`, `siteName`, `titleTemplate`, `defaultRobots`,
 `searchRobots`, `defaultOgImage`, `publisherName`, `publisherLogo`,
 `localeAlternate`, `twitterSite`, `autoGenerateSchema`, `emitWarnings`,
-`schemaTypeMap`, `hooks`, `schemaRegistry`.
+`schemaTypeMap`, `searchUrlTemplate`, `hooks`, `schemaRegistry`.
 
 ## Validation rules { #validation }
 
