@@ -1,5 +1,6 @@
 ---
 title: "Configuration"
+description: "Every SEOConfig field, URLPolicy option, and validation rule."
 ---
 
 # Configuration { #configuration }
