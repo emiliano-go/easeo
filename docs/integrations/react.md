@@ -1,5 +1,6 @@
 ---
 title: "React"
+description: "Use the easeo React component to keep document.head in sync."
 ---
 
 # React { #react }
