@@ -1,5 +1,6 @@
 ---
 title: "Why easeo"
+description: "Why deterministic SEO metadata matters and the design principles behind easeo."
 ---
 
 # Why easeo { #why-easeo }
