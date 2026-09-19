@@ -1,5 +1,6 @@
 ---
 title: "Tutorial"
+description: "What easeo is, what it is not, and how the tutorial is organized."
 ---
 
 # Tutorial { #tutorial }
