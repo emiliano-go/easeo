@@ -1,5 +1,6 @@
 ---
 title: "Rendering HTML"
+description: "Render a safe head block, or its Open Graph, Twitter, and JSON-LD parts."
 ---
 
 # Rendering HTML { #rendering-html }
