@@ -74,7 +74,9 @@ jobs:
       - name: Build native module
         run: cd packages/core && napi build --platform --release --manifest-path ../../crates/easeo-node/Cargo.toml && cp ../../crates/easeo-node/*.node .
       - name: Run Node tests
-        run: node --test tests/javascript/*.cjs
+        # Pass the directory rather than a glob: pwsh on Windows does not
+        # expand '*.cjs', and Node discovers the test files itself.
+        run: node --test tests/javascript
 
   conformance:
     name: Cross-Language Conformance
