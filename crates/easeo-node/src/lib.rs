@@ -1,7 +1,39 @@
 #![deny(clippy::all)]
 
 use easeo_core as core;
+use napi::{Env, JsFunction, JsObject};
 use napi_derive::napi;
+
+/// Emit `console.warn` for validation issues when `emitWarnings` is set.
+fn emit_warnings(env: &Env, payload: &core::SEOPayload, config: &core::SEOConfig) {
+    if !config.emit_warnings {
+        return;
+    }
+    let issues = core::validate_payload(payload);
+    if issues.is_empty() {
+        return;
+    }
+    let Ok(global) = env.get_global() else {
+        return;
+    };
+    let Ok(console) = global.get_named_property::<JsObject>("console") else {
+        return;
+    };
+    let Ok(warn) = console.get_named_property::<JsFunction>("warn") else {
+        return;
+    };
+    for issue in issues {
+        let location = issue
+            .url
+            .as_deref()
+            .map(|u| format!(" ({u})"))
+            .unwrap_or_default();
+        let message = format!("[{}] {}{}", issue.rule_id, issue.message, location);
+        if let Ok(value) = env.create_string(&message) {
+            let _ = warn.call(None, &[value]);
+        }
+    }
+}
 
 // ── Node wrapper for SEOConfig ────────────────────────────────────────
 
@@ -30,6 +62,7 @@ pub struct NodeSEOConfig {
     pub search_robots_index: Option<bool>,
     pub search_robots_follow: Option<bool>,
     pub schema_type_map_json: Option<String>,
+    pub search_url_template: Option<String>,
 }
 
 impl From<&NodeSEOConfig> for core::SEOConfig {
@@ -84,6 +117,7 @@ impl From<&NodeSEOConfig> for core::SEOConfig {
             locale_alternate: c.locale_alternate.clone(),
             twitter_site: c.twitter_site.clone(),
             emit_warnings: c.emit_warnings.unwrap_or(false),
+            search_url_template: c.search_url_template.clone(),
         }
     }
 }
@@ -362,6 +396,7 @@ impl NodeSEOPayload {
 
 #[napi]
 pub fn build_seo_payload(
+    env: Env,
     entity: NodeSEOEntity,
     route: String,
     config: NodeSEOConfig,
@@ -377,6 +412,7 @@ pub fn build_seo_payload(
     let payload = core::build_seo_payload(&core_entity, &route, &core_config)
         .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
+    emit_warnings(&env, &payload, &core_config);
     Ok(NodeSEOPayload::from_core(payload))
 }
 
@@ -484,6 +520,7 @@ impl From<&NodeSEOOverrides> for core::SEOOverrides {
 
 #[napi]
 pub fn build_seo_payload_with_overrides(
+    env: Env,
     entity: NodeSEOEntity,
     route: String,
     config: NodeSEOConfig,
@@ -502,6 +539,7 @@ pub fn build_seo_payload_with_overrides(
         core::build_seo_payload_with_overrides(&core_entity, &route, &core_config, &core_overrides)
             .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
+    emit_warnings(&env, &payload, &core_config);
     Ok(NodeSEOPayload::from_core(payload))
 }
 
