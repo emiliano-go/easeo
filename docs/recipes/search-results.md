@@ -1,5 +1,6 @@
 ---
 title: "Search Results"
+description: "A search page that stays out of the index while keeping query parameters."
 ---
 
 # Recipe: Search Results
