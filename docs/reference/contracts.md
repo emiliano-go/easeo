@@ -1,5 +1,6 @@
 ---
 title: "Contracts"
+description: "The SEO contract model: expectations, rules, exceptions, and references."
 ---
 
 # SEO Contracts { #seo-contracts }
