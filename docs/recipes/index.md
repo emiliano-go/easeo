@@ -1,5 +1,6 @@
 ---
 title: "Recipes"
+description: "Real-world patterns that show the inputs and the resulting payload shape."
 ---
 
 # Recipes { #recipes }
