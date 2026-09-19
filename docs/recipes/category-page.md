@@ -1,5 +1,6 @@
 ---
 title: "Category Page"
+description: "A taxonomy listing page with a title template and default OG image."
 ---
 
 # Recipe: Category Page
