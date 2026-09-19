@@ -1,5 +1,6 @@
 ---
 title: "Contracts in CI"
+description: "Emit an SEO contract, commit it, and fail the build when SEO drifts."
 ---
 
 # Contracts in CI { #contracts-in-ci }
