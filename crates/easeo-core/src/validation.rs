@@ -88,6 +88,17 @@ pub fn validate(payload: &SEOPayload) -> Vec<SEOIssue> {
         });
     }
 
+    // Check OG image is present
+    if payload.og.image.is_none() {
+        issues.push(SEOIssue {
+            rule_id: "EASEO108".to_string(),
+            severity: Severity::Warning,
+            message: "OG image is missing; set default_og_image or an entity image".to_string(),
+            url: Some(payload.canonical.clone()),
+            details: BTreeMap::new(),
+        });
+    }
+
     // Check OG image is absolute if present
     if let Some(ref img) = payload.og.image {
         if !img.starts_with("http://") && !img.starts_with("https://") {
