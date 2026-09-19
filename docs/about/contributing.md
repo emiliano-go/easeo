@@ -1,5 +1,6 @@
 ---
 title: "Contributing"
+description: "Build, test, and documentation conventions for contributing to easeo."
 ---
 
 # Contributing { #contributing }
@@ -84,6 +85,16 @@ directly:
 pip install -e ".[zensical]"
 zensical serve
 ```
+
+To reproduce the exact artifact that CI and Cloudflare Pages deploy (editable
+easeo, regenerated `llms-full.txt`, then the build), use the build script:
+
+```bash
+bash scripts/build_docs.sh
+```
+
+See [Deploying the Docs](deploying-docs.md#deploying-the-docs) for the
+Cloudflare Pages and GitHub Pages settings.
 
 Keep prose free of em dashes and double-hyphen separators; use commas, colons,
 parentheses, or semicolons.
