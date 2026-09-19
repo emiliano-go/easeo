@@ -2613,19 +2613,26 @@ Disable either behavior with `og_image_autodetect = false` or
 
 ## Site search
 
-For the homepage `WebSite` schema, set a search URL template to add a
-`SearchAction`. Use `{search_term_string}` as the placeholder:
+For the homepage `WebSite` schema, a search URL template adds a `SearchAction`.
+Use `{search_term_string}` as the placeholder:
 
 ```toml
 "easeo.contrib.zensical" = {
   canonical_host = "example.com",
   public_base_url = "https://example.com/",
-  search_url_template = "https://example.com/?q={search_term_string}",
+  search_url_template = "https://example.com/search?q={search_term_string}",
 }
 ```
 
-Without a template, no `SearchAction` is emitted, because a search action that
-points at a non-existent endpoint does more harm than good.
+Only set this when the URL actually runs a search, because a `SearchAction`
+that points nowhere does more harm than good. Without a template, no
+`SearchAction` is emitted.
+
+!!! note "Zensical's built-in search"
+
+    Zensical search is a client-side overlay with no URL endpoint, so it has
+    nothing to point a `SearchAction` at. Leave `search_url_template` unset
+    unless you run a separate server-side search.
 
 ## Validation warnings
 
