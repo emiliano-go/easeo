@@ -1,5 +1,6 @@
 ---
 title: "Nuxt"
+description: "Use the easeo Nuxt module and useEaseoSeo() composable."
 ---
 
 # Nuxt { #nuxt }
