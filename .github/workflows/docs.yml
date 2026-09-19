@@ -30,10 +30,8 @@ jobs:
         with:
           python-version: "3.12"
       - uses: dtolnay/rust-toolchain@stable
-      - name: Install easeo with the zensical extension
-        run: pip install ".[zensical]"
-      - name: Build with zensical
-        run: zensical build
+      - name: Build the docs with the local easeo
+        run: bash scripts/build_docs.sh
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
