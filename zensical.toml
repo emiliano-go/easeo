@@ -158,7 +158,6 @@ name = "@easeo/core on npm"
   default_og_image_width = 1200,
   default_og_image_height = 630,
   default_og_image_alt = "easeo: deterministic SEO metadata generation",
-  search_url_template = "https://easeo.emiliano-go.com/?q={search_term_string}",
 }
 
 [project.markdown_extensions.tables]
