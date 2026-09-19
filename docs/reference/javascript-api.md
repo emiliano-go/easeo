@@ -1,5 +1,6 @@
 ---
 title: "JavaScript API"
+description: "The @easeo/core JavaScript and TypeScript API, serialization, and errors."
 ---
 
 # JavaScript/TypeScript API Reference { #javascripttypescript-api-reference }
