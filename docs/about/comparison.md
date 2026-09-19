@@ -1,5 +1,6 @@
 ---
 title: "Comparison"
+description: "How easeo compares to building and maintaining SEO metadata by hand."
 ---
 
 # Comparison: manual vs easeo { #comparison }
