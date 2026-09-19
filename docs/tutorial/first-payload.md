@@ -1,5 +1,6 @@
 ---
 title: "First Payload"
+description: "Build your first SEO payload, read its fields, and serialize it."
 ---
 
 # First Payload { #first-payload }
