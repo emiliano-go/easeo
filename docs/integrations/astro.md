@@ -1,5 +1,6 @@
 ---
 title: "Astro"
+description: "Use the easeo Astro integration for config injection and contract emission."
 ---
 
 # Astro { #astro }
