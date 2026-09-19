@@ -1,5 +1,6 @@
 ---
 title: "Fallback Chains"
+description: "How every SEO field resolves through overrides, entity, config, and defaults."
 ---
 
 # Fallback Chains { #fallback-chains }
