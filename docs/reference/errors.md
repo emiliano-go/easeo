@@ -1,5 +1,6 @@
 ---
 title: "Errors"
+description: "The easeo error hierarchy, where each type is raised, and JavaScript error codes."
 ---
 
 # Errors { #errors }
