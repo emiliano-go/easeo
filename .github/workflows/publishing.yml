@@ -3,6 +3,8 @@ name: Publish
 on:
   release:
     types: [published]
+  # Manual runs only build/test; publishing is gated to release events.
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
@@ -227,6 +229,7 @@ jobs:
     name: Publish to PyPI
     runs-on: ubuntu-latest
     needs: build-pypi
+    if: github.event_name == 'release'
     environment:
       name: pypi
       url: https://pypi.org/project/easeo
@@ -252,6 +255,7 @@ jobs:
     name: Publish to crates.io
     runs-on: ubuntu-latest
     needs: [conformance, lint]
+    if: github.event_name == 'release'
     environment:
       name: crates
       url: https://crates.io/crates/easeo-core
@@ -289,6 +293,7 @@ jobs:
     name: Publish to npm
     runs-on: ubuntu-latest
     needs: build-npm
+    if: github.event_name == 'release'
     environment:
       name: npm
       url: https://www.npmjs.com/package/@easeo/core
@@ -309,19 +314,28 @@ jobs:
           pattern: bindings-*
           merge-multiple: true
           path: packages/core/
-      - name: Publish to npm
-        run: npm publish --access public --provenance
+      # 0.1.0 was published manually (OIDC cannot create a package), so skip
+      # already-published versions on re-runs. Authenticates via OIDC.
+      - name: Check whether this version is already on npm
+        id: check
         working-directory: packages/core/
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-  # First publish of a new package cannot use OIDC trusted publishing, so these
-  # use NPM_TOKEN. Switch to OIDC once each package exists on the registry.
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "@easeo/core@${VERSION}" version > /dev/null 2>&1; then
+            echo "already=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "already=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Publish to npm
+        if: steps.check.outputs.already == 'false'
+        run: npm publish --access public
+        working-directory: packages/core/
 
   publish-integrations:
     name: Publish @easeo/${{ matrix.package }}
     runs-on: ubuntu-latest
     needs: publish-npm
+    if: github.event_name == 'release'
     strategy:
       fail-fast: false
       matrix:
@@ -340,8 +354,17 @@ jobs:
           registry-url: "https://registry.npmjs.org"
       - name: Ensure npm supports trusted publishing
         run: npm install -g npm@latest
-      - name: Publish to npm
-        run: npm publish --access public --provenance
+      - name: Check whether this version is already on npm
+        id: check
         working-directory: integrations/${{ matrix.package }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "@easeo/${{ matrix.package }}@${VERSION}" version > /dev/null 2>&1; then
+            echo "already=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "already=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Publish to npm
+        if: steps.check.outputs.already == 'false'
+        run: npm publish --access public
+        working-directory: integrations/${{ matrix.package }}
