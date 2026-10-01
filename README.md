@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>Deterministic SEO metadata generation for content platforms.</strong>
+  <strong>A deterministic SEO metadata library for content platforms.</strong>
 </p>
 
 <p align="center">
@@ -41,7 +41,7 @@
 
 ## What is easeo
 
-`easeo` is a deterministic SEO metadata generator. It takes a content entity, the route it lives at, and a site-wide configuration, and returns a complete SEO payload: canonical URL, title, description, robots directives, Open Graph, Twitter Cards, and JSON-LD.
+`easeo` is a deterministic SEO metadata library: you call it; it doesn't own your app's routing, rendering, or lifecycle. It takes a content entity, the route it lives at, and a site-wide configuration, and returns a complete SEO payload: canonical URL, title, description, robots directives, Open Graph, Twitter Cards, and JSON-LD.
 
 All logic lives in the Rust core (`easeo-core`). The Python and Node.js packages wrap the same engine, so the same entity, route, and config produce identical output in every language. The cross-language conformance suite asserts that byte for byte.
 
@@ -152,6 +152,7 @@ See [Why easeo](https://easeo.emiliano-go.com/about/why-easeo/) for the design g
 
 ## What easeo is not
 
+- Not a framework. Adapters are thin marshalling helpers, not lifecycle owners.
 - Not a scoring or keyword analysis tool.
 - Not a crawler or site auditor.
 - Not a content rewriter or generator.
