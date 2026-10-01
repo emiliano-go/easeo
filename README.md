@@ -14,13 +14,13 @@
 
 <p align="center">
   <a href="https://pypi.org/project/easeo/">
-    <img src="https://img.shields.io/pypi/v/easeo?logo=pypi&logoColor=white&style=for-the-badge" alt="PyPI">
+    <img src="https://img.shields.io/pypi/v/easeo?logo=pypi&logoColor=white&style=for-the-badge&cacheSeconds=300" alt="PyPI">
   </a>
   <a href="https://www.npmjs.com/package/@easeo/core">
-    <img src="https://img.shields.io/npm/v/@easeo/core?logo=npm&logoColor=white&style=for-the-badge" alt="npm">
+    <img src="https://img.shields.io/npm/v/@easeo/core?logo=npm&logoColor=white&style=for-the-badge&cacheSeconds=300" alt="npm">
   </a>
   <a href="https://crates.io/crates/easeo-core">
-    <img src="https://img.shields.io/crates/v/easeo-core?logo=rust&logoColor=white&style=for-the-badge" alt="crates.io">
+    <img src="https://img.shields.io/crates/v/easeo-core?logo=rust&logoColor=white&style=for-the-badge&cacheSeconds=300" alt="crates.io">
   </a>
   <a href="https://www.python.org/downloads/">
     <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white&style=for-the-badge" alt="Python">
