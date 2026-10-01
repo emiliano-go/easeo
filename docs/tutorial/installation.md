@@ -53,7 +53,7 @@ npm install @easeo/react
     ```python
     import easeo
     print(easeo.__version__)
-    # 0.1.1
+    # 0.2.0
     ```
 
 === "JavaScript"

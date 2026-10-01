@@ -55,7 +55,7 @@ Output:
 ```json
 {
   "contract_version": "1",
-  "generator": { "name": "easeo", "version": "0.1.1" },
+  "generator": { "name": "easeo", "version": "0.2.0" },
   "site": { "canonical_host": "example.com", "scheme": "https" },
   "defaults": {},
   "rules": [],
