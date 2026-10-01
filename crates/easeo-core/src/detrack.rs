@@ -1,6 +1,13 @@
 use std::collections::BTreeMap;
 
 /// Tracking query parameters removed by default.
+///
+/// The list is deliberately conservative: only vendor-prefixed click ids,
+/// UTM parameters, and unambiguous session identifiers are removed. Generic
+/// names that applications may use for real content (`ref`, `source`, `tag`,
+/// `keyword`, `campaign`, `redirect`, `next`, `timestamp`, and similar) are
+/// *not* stripped by default. Add them per site with
+/// [`crate::config::URLPolicy::extra_tracking_params`].
 pub const DEFAULT_PATTERNS: &[&str] = &[
     // UTM parameters
     "utm_source",
@@ -24,9 +31,7 @@ pub const DEFAULT_PATTERNS: &[&str] = &[
     "igclid",
     "ttclid",
     "li_fat_id",
-    // Referral
-    "ref",
-    "source",
+    // Mailchimp
     "mc_cid",
     "mc_eid",
     // Analytics
@@ -41,37 +46,14 @@ pub const DEFAULT_PATTERNS: &[&str] = &[
     "vero_id",
     "wickedid",
     "yclid",
-    // Cache busting
-    "cb",
-    "rand",
-    "timestamp",
-    "t",
-    "_t",
     // Session
-    "sid",
     "phpsessid",
     "jsessionid",
     "asp.net_sessionid",
-    // Redirect
-    "next",
-    "return",
-    "redirect",
-    "redirect_to",
-    "redirect_url",
-    "goto",
-    // Affiliate / marketing
-    "aff",
-    "aff_id",
-    "click_id",
-    "tag",
-    "keyword",
-    "campaign",
     // Misc tracking
     "ncid",
     "zanpid",
     "zanphp",
-    "msclkid_extra",
-    "twclid_extra",
 ];
 
 /// Result of cleaning a URL's tracking parameters.
@@ -98,7 +80,7 @@ pub fn clean_url(url: &str) -> CleanResult {
     for pair in query.split('&') {
         let mut parts = pair.splitn(2, '=');
         if let (Some(key), Some(value)) = (parts.next(), parts.next()) {
-            if is_tracking_param(key) {
+            if is_tracking_param(&decoded_key(key)) {
                 removed.insert(key.to_string(), value.to_string());
             } else {
                 cleaned.insert(key.to_string(), value.to_string());
@@ -129,7 +111,7 @@ pub fn clean_query(query: &str) -> String {
         .split('&')
         .filter(|pair| {
             let key = pair.split_once('=').map(|(k, _)| k).unwrap_or(pair);
-            !is_tracking_param(key)
+            !is_tracking_param(&decoded_key(key))
         })
         .map(|s| s.to_string())
         .collect();
@@ -141,9 +123,27 @@ pub fn clean_query(query: &str) -> String {
     }
 }
 
+/// Decodes a query parameter key for matching. The original bytes are kept in
+/// output; decoding only feeds tracking checks.
+pub(crate) fn decoded_key(raw_key: &str) -> String {
+    url::form_urlencoded::parse(raw_key.as_bytes())
+        .next()
+        .map(|(key, _)| key.into_owned())
+        .unwrap_or_else(|| raw_key.to_string())
+}
+
+fn is_default_tracking_param(key: &str) -> bool {
+    DEFAULT_PATTERNS.iter().any(|p| p.eq_ignore_ascii_case(key))
+}
+
 pub(crate) fn is_tracking_param(key: &str) -> bool {
-    let lower = key.to_lowercase();
-    DEFAULT_PATTERNS.iter().any(|&p| p == lower)
+    is_default_tracking_param(key)
+}
+
+/// Returns `true` when `key` matches the built-in tracking list or one of the
+/// caller supplied extra parameter names.
+pub(crate) fn is_tracking_param_with(key: &str, extra: &[String]) -> bool {
+    is_default_tracking_param(key) || extra.iter().any(|p| p.eq_ignore_ascii_case(key))
 }
 
 /// Returns the default tracking parameter patterns.

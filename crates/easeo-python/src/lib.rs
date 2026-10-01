@@ -826,7 +826,8 @@ struct URLPolicy {
     /// Whether ``http`` is rewritten to ``https``.
     #[pyo3(get)]
     enforce_https: bool,
-    /// Whether path segments are lowercased.
+    /// Whether path segments are lowercased. Off by default: path case is
+    /// preserved because it can be significant.
     #[pyo3(get)]
     lowercase_paths: bool,
     /// Trailing slash policy: ``"always"``, ``"never"``, or ``"preserve"``.
@@ -838,9 +839,14 @@ struct URLPolicy {
     /// Whether tracking parameters such as ``utm_*`` are removed.
     #[pyo3(get)]
     strip_tracking_params: bool,
-    /// Query parameters to keep when tracking parameters are stripped.
+    /// Query parameters to keep when tracking parameters are stripped. A
+    /// listed parameter is kept even when it matches a tracking pattern.
     #[pyo3(get)]
     allowed_query_params: Vec<String>,
+    /// Additional query parameter names to strip, on top of the built-in
+    /// tracking list.
+    #[pyo3(get)]
+    extra_tracking_params: Vec<String>,
 }
 
 #[pymethods]
@@ -849,13 +855,14 @@ impl URLPolicy {
     ///
     /// Args:
     ///     enforce_https: Rewrite ``http`` to ``https``.
-    ///     lowercase_paths: Lowercase path segments.
+    ///     lowercase_paths: Lowercase path segments. Defaults to ``False``.
     ///     trailing_slash: ``"always"``, ``"never"``, or ``"preserve"``.
     ///     collapse_duplicate_slashes: Collapse repeated slashes.
     ///     strip_tracking_params: Remove tracking parameters.
     ///     allowed_query_params: Query parameters to keep.
+    ///     extra_tracking_params: Extra parameter names to strip.
     #[new]
-    #[pyo3(signature = (*, enforce_https=true, lowercase_paths=true, trailing_slash="never", collapse_duplicate_slashes=true, strip_tracking_params=true, allowed_query_params=None))]
+    #[pyo3(signature = (*, enforce_https=true, lowercase_paths=false, trailing_slash="never", collapse_duplicate_slashes=true, strip_tracking_params=true, allowed_query_params=None, extra_tracking_params=None))]
     fn new(
         enforce_https: bool,
         lowercase_paths: bool,
@@ -863,6 +870,7 @@ impl URLPolicy {
         collapse_duplicate_slashes: bool,
         strip_tracking_params: bool,
         allowed_query_params: Option<Vec<String>>,
+        extra_tracking_params: Option<Vec<String>>,
     ) -> PyResult<Self> {
         Ok(Self {
             enforce_https,
@@ -871,6 +879,7 @@ impl URLPolicy {
             collapse_duplicate_slashes,
             strip_tracking_params,
             allowed_query_params: allowed_query_params.unwrap_or_default(),
+            extra_tracking_params: extra_tracking_params.unwrap_or_default(),
         })
     }
 }
@@ -888,6 +897,7 @@ impl From<&core::URLPolicy> for URLPolicy {
             collapse_duplicate_slashes: p.collapse_duplicate_slashes,
             strip_tracking_params: p.strip_tracking_params,
             allowed_query_params: p.allowed_query_params.clone(),
+            extra_tracking_params: p.extra_tracking_params.clone(),
         }
     }
 }
@@ -914,6 +924,7 @@ impl TryFrom<&URLPolicy> for core::URLPolicy {
             collapse_duplicate_slashes: p.collapse_duplicate_slashes,
             strip_tracking_params: p.strip_tracking_params,
             allowed_query_params: p.allowed_query_params.clone(),
+            extra_tracking_params: p.extra_tracking_params.clone(),
         })
     }
 }
@@ -1095,8 +1106,8 @@ impl SEOEntity {
     ///     title: Page title.
     ///     excerpt: Short description.
     ///     body_html: Full content as HTML.
-    ///     status: Publication status. Anything other than ``publish``
-    ///         becomes noindex.
+    ///     status: Publication status. ``"published"`` (case-insensitive)
+    ///         keeps the page indexable; any other value becomes noindex.
     ///     featured_image: Primary image.
     ///     published_at: ISO date or datetime.
     ///     updated_at: ISO date or datetime.
@@ -1208,7 +1219,11 @@ impl SEOOverrides {
     /// Args:
     ///     meta_title: Overrides the resolved title.
     ///     meta_description: Overrides the resolved description.
-    ///     canonical_url: Overrides the resolved canonical URL.
+    ///     canonical_url: Overrides the resolved canonical URL. Trusted:
+    ///         used as-is after an absolute ``http(s)`` URL check.
+    ///     canonical_path: Overrides the route used to build the canonical
+    ///         URL, normalized through the URL policy. Ignored when
+    ///         ``canonical_url`` is set.
     ///     robots: Overrides the robots directives.
     ///     og_title: Overrides the Open Graph title.
     ///     og_description: Overrides the Open Graph description.
@@ -1224,12 +1239,13 @@ impl SEOOverrides {
     ///     og_audio: Open Graph audio URL.
     ///     og_video: Open Graph video URL.
     #[new]
-    #[pyo3(signature = (*, meta_title=None, meta_description=None, canonical_url=None, robots=None, og_title=None, og_description=None, og_image=None, twitter_card=None, twitter_title=None, twitter_description=None, twitter_image=None, schema_jsonld=None, omit_schema=false, skip_title_template=false, twitter_creator=None, og_audio=None, og_video=None))]
+    #[pyo3(signature = (*, meta_title=None, meta_description=None, canonical_url=None, canonical_path=None, robots=None, og_title=None, og_description=None, og_image=None, twitter_card=None, twitter_title=None, twitter_description=None, twitter_image=None, schema_jsonld=None, omit_schema=false, skip_title_template=false, twitter_creator=None, og_audio=None, og_video=None))]
     fn new<'py>(
         py: Python<'py>,
         meta_title: Option<String>,
         meta_description: Option<String>,
         canonical_url: Option<String>,
+        canonical_path: Option<String>,
         robots: Option<Robots>,
         og_title: Option<String>,
         og_description: Option<String>,
@@ -1265,6 +1281,7 @@ impl SEOOverrides {
                 meta_title,
                 meta_description,
                 canonical_url,
+                canonical_path,
                 robots: r,
                 og_title,
                 og_description,

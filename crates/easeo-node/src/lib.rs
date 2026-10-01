@@ -53,7 +53,7 @@ pub struct NodeSeoConfig {
     pub default_og_image: Option<String>,
     /// Rewrite `http` to `https`. Defaults to `true`.
     pub enforce_https: Option<bool>,
-    /// Lowercase path segments. Defaults to `true`.
+    /// Lowercase path segments. Defaults to `false` (preserve case).
     pub lowercase_paths: Option<bool>,
     /// Trailing slash policy: `"always"`, `"never"`, or `"preserve"`.
     pub trailing_slash: Option<String>,
@@ -61,8 +61,11 @@ pub struct NodeSeoConfig {
     pub collapse_duplicate_slashes: Option<bool>,
     /// Remove tracking parameters. Defaults to `true`.
     pub strip_tracking_params: Option<bool>,
-    /// Query parameters to keep when tracking parameters are stripped.
+    /// Query parameters to keep when tracking parameters are stripped. A
+    /// listed parameter is kept even when it matches a tracking pattern.
     pub allowed_query_params: Option<Vec<String>>,
+    /// Additional query parameter names to strip, on top of the built-in list.
+    pub extra_tracking_params: Option<Vec<String>>,
     /// Open Graph locale, for example `"en_US"`.
     pub locale: Option<String>,
     /// Alternate locales.
@@ -103,11 +106,12 @@ impl From<&NodeSeoConfig> for core::SEOConfig {
             public_base_url: c.public_base_url.clone(),
             url_policy: core::URLPolicy {
                 enforce_https: c.enforce_https.unwrap_or(true),
-                lowercase_paths: c.lowercase_paths.unwrap_or(true),
+                lowercase_paths: c.lowercase_paths.unwrap_or(false),
                 trailing_slash: trailing,
                 collapse_duplicate_slashes: c.collapse_duplicate_slashes.unwrap_or(true),
                 strip_tracking_params: c.strip_tracking_params.unwrap_or(true),
                 allowed_query_params: c.allowed_query_params.clone().unwrap_or_default(),
+                extra_tracking_params: c.extra_tracking_params.clone().unwrap_or_default(),
             },
             site_name: c.site_name.clone(),
             title_template: c.title_template.clone(),
@@ -166,7 +170,8 @@ pub struct NodeSeoEntity {
     pub slug: Option<String>,
     /// Full content as HTML, used to derive a snippet when no excerpt is set.
     pub body_html: Option<String>,
-    /// Publication status. Anything other than `publish` becomes noindex.
+    /// Publication status. `"published"` (case-insensitive) keeps the page
+    /// indexable; any other value becomes noindex.
     pub status: Option<String>,
     /// Absolute URL of the primary image.
     pub image: Option<String>,
@@ -570,8 +575,12 @@ pub struct NodeSeoOverrides {
     pub meta_title: Option<String>,
     /// Overrides the resolved description.
     pub meta_description: Option<String>,
-    /// Overrides the resolved canonical URL.
+    /// Overrides the resolved canonical URL. Trusted: used as-is after an
+    /// absolute `http(s)` URL check, bypassing the URL policy.
     pub canonical_url: Option<String>,
+    /// Overrides the route used to build the canonical URL, through the full
+    /// URL normalization pipeline. Ignored when `canonical_url` is set.
+    pub canonical_path: Option<String>,
     /// Overrides the robots `index` directive.
     pub robots_index: Option<bool>,
     /// Overrides the robots `follow` directive.
@@ -658,6 +667,7 @@ impl From<&NodeSeoOverrides> for core::SEOOverrides {
             meta_title: o.meta_title.clone(),
             meta_description: o.meta_description.clone(),
             canonical_url: o.canonical_url.clone(),
+            canonical_path: o.canonical_path.clone(),
             robots,
             og_title: o.og_title.clone(),
             og_description: o.og_description.clone(),
@@ -1104,6 +1114,7 @@ pub fn validate_payload(payload: &NodeSeoPayload) -> Vec<NodeSeoIssue> {
 
 /// Normalizes a route path according to the given policy fields.
 #[napi]
+#[allow(clippy::too_many_arguments)]
 pub fn normalize_path(
     path: String,
     enforce_https: Option<bool>,
@@ -1112,10 +1123,11 @@ pub fn normalize_path(
     collapse_duplicate_slashes: Option<bool>,
     strip_tracking_params: Option<bool>,
     allowed_query_params: Option<Vec<String>>,
+    extra_tracking_params: Option<Vec<String>>,
 ) -> Result<String> {
     let policy = core::URLPolicy {
         enforce_https: enforce_https.unwrap_or(true),
-        lowercase_paths: lowercase_paths.unwrap_or(true),
+        lowercase_paths: lowercase_paths.unwrap_or(false),
         trailing_slash: match trailing_slash.as_deref() {
             Some("always") => core::TrailingSlash::Always,
             Some("preserve") => core::TrailingSlash::Preserve,
@@ -1124,6 +1136,7 @@ pub fn normalize_path(
         collapse_duplicate_slashes: collapse_duplicate_slashes.unwrap_or(true),
         strip_tracking_params: strip_tracking_params.unwrap_or(true),
         allowed_query_params: allowed_query_params.unwrap_or_default(),
+        extra_tracking_params: extra_tracking_params.unwrap_or_default(),
     };
     core::url::normalize_path(&path, &policy).map_err(|e| napi::Error::from_reason(e.to_string()))
 }

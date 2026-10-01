@@ -42,8 +42,9 @@ pub struct URLPolicy {
     /// Rewrite `http` to `https`. Defaults to `true`.
     #[serde(default = "default_true")]
     pub enforce_https: bool,
-    /// Lowercase path segments. Defaults to `true`.
-    #[serde(default = "default_true")]
+    /// Lowercase path segments. Defaults to `false`: path case is preserved
+    /// because it can be significant. Set to `true` to opt in.
+    #[serde(default = "default_false")]
     pub lowercase_paths: bool,
     /// Trailing slash policy. Defaults to [`TrailingSlash::Never`].
     #[serde(default = "default_trailing_slash")]
@@ -54,13 +55,24 @@ pub struct URLPolicy {
     /// Remove tracking parameters such as `utm_*` and `fbclid`. Defaults to `true`.
     #[serde(default = "default_true")]
     pub strip_tracking_params: bool,
-    /// Query parameters to keep when tracking parameters are stripped.
+    /// Query parameters to keep when tracking parameters are stripped. A
+    /// parameter listed here is preserved even when it matches a tracking
+    /// pattern.
     #[serde(default)]
     pub allowed_query_params: Vec<String>,
+    /// Additional query parameter names to strip, on top of the built-in
+    /// tracking list. Matching is case-insensitive and exact; it is not a
+    /// replacement for the built-in list.
+    #[serde(default)]
+    pub extra_tracking_params: Vec<String>,
 }
 
 fn default_true() -> bool {
     true
+}
+
+fn default_false() -> bool {
+    false
 }
 
 fn default_trailing_slash() -> TrailingSlash {
@@ -71,11 +83,12 @@ impl Default for URLPolicy {
     fn default() -> Self {
         Self {
             enforce_https: true,
-            lowercase_paths: true,
+            lowercase_paths: false,
             trailing_slash: TrailingSlash::Never,
             collapse_duplicate_slashes: true,
             strip_tracking_params: true,
             allowed_query_params: Vec::new(),
+            extra_tracking_params: Vec::new(),
         }
     }
 }

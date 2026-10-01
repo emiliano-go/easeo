@@ -465,7 +465,7 @@ optional.
 | `excerpt` | `str \| None` | Description, `og:description` |
 | `body_html` | `str \| None` | Description snippet when no excerpt |
 | `slug` | `str \| None` | Metadata only, not emitted |
-| `status` | `str \| None` | Robots (`"published"` allows indexing) |
+| `status` | `str \| None` | Robots (`"published"` allows indexing; any other value is noindex) |
 | `featured_image` | `SEOImage \| str \| None` | `og:image` and schema image |
 | `published_at` | `str \| None` | Schema `datePublished` |
 | `updated_at` | `str \| None` | Schema `dateModified` |
@@ -593,16 +593,19 @@ truncates on a character boundary with an ellipsis.
 
 ## canonical
 
-1. `SEOOverrides.canonical_url`
-2. Normalized route path (full URL normalization pipeline)
+1. `SEOOverrides.canonical_url` (trusted, bypasses the URL policy; must be an
+   absolute `http(s)` URL)
+2. `SEOOverrides.canonical_path` (full URL normalization pipeline)
+3. Normalized route path (full URL normalization pipeline)
 
 ## robots
 
 1. `SEOOverrides.robots`
 2. Entity-derived default:
    - `entity_type == "search"` → `config.search_robots` (default `noindex,follow`)
-   - `entity.status == "published"` → `index,follow`
-   - otherwise → `config.default_robots` (default `index,follow`)
+   - `entity.status == "published"` (case-insensitive) → `index,follow`
+   - any other status → `noindex,follow`
+   - status unset → `config.default_robots` (default `index,follow`)
 
 ## Open Graph
 
@@ -639,7 +642,7 @@ Breadcrumbs from `entity.breadcrumbs` are always appended as a
 |---|---|
 | title | Override > Entity > `"Untitled"` + template |
 | description | Override > Excerpt > Body snippet > `""` |
-| canonical | Override > Normalized route |
+| canonical | canonical_url > canonical_path > Normalized route |
 | robots | Override > Entity status default |
 | og:title | Override > Resolved title |
 | og:description | Override > Resolved description |
@@ -804,10 +807,10 @@ or extend it. The result is exposed as `schema_jsonld` (Python) or
 
 | Schema | Built from | Key fields |
 |---|---|---|
-| `Article` | `post`, `video` | headline, dates, author, publisher |
+| `Article` | `post` | headline, dates, author, publisher |
 | `WebSite` | `home` | name, url, description, optional `SearchAction` |
 | `WebPage` | `page` | name, url, description |
-| `VideoObject` | `video` | name, url, description |
+| `VideoObject` | `video` | name, url, description, `thumbnailUrl`, `uploadDate` |
 | `CollectionPage` | `taxonomy` | name, url |
 | `SearchResultsPage` | `search` | name, url |
 | `Product` | `product` | sku, offers (price, currency, availability) |
@@ -818,6 +821,21 @@ or extend it. The result is exposed as `schema_jsonld` (Python) or
 
 Breadcrumbs are always appended as a `BreadcrumbList`. When a page has both a
 main schema and breadcrumbs, `schema_jsonld` becomes a list of two objects.
+
+## Schema depth { #depth }
+
+Built-in schemas are intentionally minimal: they cover the fields a page can
+supply and the properties search engines commonly consume, not the full
+Schema.org vocabulary. Two examples:
+
+* `VideoObject` adds `thumbnailUrl` and `uploadDate`, but does not model
+  duration, `contentUrl`, or `embedUrl`.
+* `LocalBusiness.address` is a single `PostalAddress.streetAddress` string;
+  locality, region, postal code, and country are not modeled.
+
+When a page needs deeper modeling, replace the schema per page with
+`SEOOverrides.schema_jsonld`, or register a generator per type with
+`SchemaRegistry` (both shown below).
 
 ## Three ways to control it { #control }
 
@@ -918,14 +936,28 @@ Controlled by `URLPolicy`:
 |---|---|---|
 | Ensure leading slash | always | `/blog` and `blog` both become `/blog` |
 | Collapse duplicate slashes | `True` | `/a//b` becomes `/a/b` |
-| Lowercase | `True` | `/Blog/Post` becomes `/blog/post` |
+| Lowercase | `False` | Path case is preserved; `/Products/iPhone` stays as written. Set `lowercase_paths=True` to lowercase |
 | Trailing slash | `"never"` | `/blog/` becomes `/blog`; use `"always"` or `"preserve"` to change |
 | Enforce HTTPS | `True` | `http://` becomes `https://` |
 
+Fragments are always dropped: a canonical URL never carries one, whether the
+input is an absolute URL or a relative path.
+
 ## Query filtering { #query }
 
-Tracking parameters are stripped using the absorbed detrack engine. When
-`allowed_query_params` is non-empty, only those parameters survive.
+Tracking parameters are stripped using the absorbed detrack engine. The
+built-in list is deliberately narrow: UTM parameters, vendor click ids
+(`fbclid`, `gclid`, `msclkid`, ...), and unambiguous session identifiers.
+Names that applications commonly use for real content (`ref`, `source`,
+`tag`, `keyword`, `campaign`, `redirect`, `next`, `timestamp`, ...) are kept
+by default. Add site-specific names with `extra_tracking_params`.
+
+Parameter keys are decoded before matching, so `%75tm_source` is recognized as
+`utm_source`, while the emitted query preserves the original bytes, order, and
+duplicates.
+
+When `allowed_query_params` is non-empty, only those parameters survive, even
+when one of them looks like a tracking parameter.
 
 === "Python"
 
@@ -6086,11 +6118,17 @@ Controls canonical URL normalization.
 | Field | Type | Default |
 |---|---|---|
 | `enforce_https` | `bool` | `True` |
-| `lowercase_paths` | `bool` | `True` |
+| `lowercase_paths` | `bool` | `False` |
 | `trailing_slash` | `"always" \| "never" \| "preserve"` | `"never"` |
 | `collapse_duplicate_slashes` | `bool` | `True` |
 | `strip_tracking_params` | `bool` | `True` |
 | `allowed_query_params` | `list[str]` | `[]` |
+| `extra_tracking_params` | `list[str]` | `[]` |
+
+Path case is preserved by default because it can be significant. Set
+`lowercase_paths=True` to opt in. `strip_tracking_params` removes only
+unambiguous tracking names; add site-specific ones with
+`extra_tracking_params`.
 
 === "Python"
 

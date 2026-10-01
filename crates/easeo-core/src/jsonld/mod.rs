@@ -12,6 +12,8 @@ pub mod organization;
 pub mod product;
 /// Custom schema registries.
 pub mod registry;
+/// VideoObject schemas.
+pub mod video;
 /// WebSite, WebPage, and related page schemas.
 pub mod website;
 
@@ -68,7 +70,7 @@ pub fn build_schema(ctx: &SchemaContext) -> Result<Option<serde_json::Value>, Ea
         "WebPage" | "WebSite" | "CollectionPage" | "SearchResultsPage" => {
             Ok(Some(website::build_website(&schema_type, ctx)?))
         }
-        "VideoObject" => Ok(Some(website::build_website(&schema_type, ctx)?)),
+        "VideoObject" => Ok(Some(video::build_video(ctx)?)),
         _ => {
             if let Some(registry) = ctx.registry {
                 if let Some(builder) = registry.get(&schema_type) {

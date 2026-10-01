@@ -41,16 +41,19 @@ truncates on a character boundary with an ellipsis.
 
 ## canonical
 
-1. `SEOOverrides.canonical_url`
-2. Normalized route path (full URL normalization pipeline)
+1. `SEOOverrides.canonical_url` (trusted, bypasses the URL policy; must be an
+   absolute `http(s)` URL)
+2. `SEOOverrides.canonical_path` (full URL normalization pipeline)
+3. Normalized route path (full URL normalization pipeline)
 
 ## robots
 
 1. `SEOOverrides.robots`
 2. Entity-derived default:
    - `entity_type == "search"` → `config.search_robots` (default `noindex,follow`)
-   - `entity.status == "published"` → `index,follow`
-   - otherwise → `config.default_robots` (default `index,follow`)
+   - `entity.status == "published"` (case-insensitive) → `index,follow`
+   - any other status → `noindex,follow`
+   - status unset → `config.default_robots` (default `index,follow`)
 
 ## Open Graph
 
@@ -87,7 +90,7 @@ Breadcrumbs from `entity.breadcrumbs` are always appended as a
 |---|---|
 | title | Override > Entity > `"Untitled"` + template |
 | description | Override > Excerpt > Body snippet > `""` |
-| canonical | Override > Normalized route |
+| canonical | canonical_url > canonical_path > Normalized route |
 | robots | Override > Entity status default |
 | og:title | Override > Resolved title |
 | og:description | Override > Resolved description |

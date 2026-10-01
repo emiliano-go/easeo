@@ -49,11 +49,7 @@ pub fn normalize_public_url(url_or_path: &str, config: &SEOConfig) -> Result<Str
     let (path, query) = match parsed_input {
         Some(ref input) => {
             if input.scheme().is_empty() && input.host_str().is_none() {
-                let parts: Vec<&str> = value.splitn(2, '?').collect();
-                (
-                    parts[0].to_string(),
-                    parts.get(1).unwrap_or(&"").to_string(),
-                )
+                split_path_and_query(&value)
             } else {
                 (
                     input.path().to_string(),
@@ -61,13 +57,7 @@ pub fn normalize_public_url(url_or_path: &str, config: &SEOConfig) -> Result<Str
                 )
             }
         }
-        None => {
-            let parts: Vec<&str> = value.splitn(2, '?').collect();
-            (
-                parts[0].to_string(),
-                parts.get(1).unwrap_or(&"").to_string(),
-            )
-        }
+        None => split_path_and_query(&value),
     };
 
     let base_path = parsed_base.path().trim_end_matches('/');
@@ -145,40 +135,44 @@ pub(crate) fn apply_trailing_slash(path: &str, mode: &TrailingSlash) -> String {
     }
 }
 
+/// Splits a relative path or path-and-query string into its path and query
+/// parts. A fragment, when present, is dropped: canonical URLs never carry
+/// one.
+fn split_path_and_query(value: &str) -> (String, String) {
+    let without_fragment = value.split('#').next().unwrap_or("");
+    let mut parts = without_fragment.splitn(2, '?');
+    let path = parts.next().unwrap_or("").to_string();
+    let query = parts.next().unwrap_or("").to_string();
+    (path, query)
+}
+
 pub(crate) fn filter_query(query: &str, policy: &URLPolicy) -> String {
     if query.is_empty() {
         return String::new();
     }
 
-    let mut pairs: Vec<(String, String)> = query
-        .split('&')
-        .filter_map(|pair| {
-            let mut parts = pair.splitn(2, '=');
-            let key = parts.next()?.to_string();
-            if key.is_empty() {
-                return None;
-            }
-            let value = parts.next().unwrap_or("").to_string();
-            Some((key, value))
-        })
+    let allowlist: std::collections::HashSet<&str> = policy
+        .allowed_query_params
+        .iter()
+        .map(|s| s.as_str())
         .collect();
 
-    if policy.strip_tracking_params {
-        pairs.retain(|(k, _)| !crate::detrack::is_tracking_param(k));
-    }
-
-    if !policy.allowed_query_params.is_empty() {
-        let allowlist: std::collections::HashSet<&str> = policy
-            .allowed_query_params
-            .iter()
-            .map(|s| s.as_str())
-            .collect();
-        pairs.retain(|(k, _)| allowlist.contains(k.as_str()));
-    }
-
-    pairs
-        .iter()
-        .map(|(k, v)| format!("{}={}", k, v))
+    query
+        .split('&')
+        .filter(|pair| {
+            let raw_key = pair.split_once('=').map(|(k, _)| k).unwrap_or(pair);
+            if raw_key.is_empty() {
+                return false;
+            }
+            let key = crate::detrack::decoded_key(raw_key);
+            if !allowlist.is_empty() {
+                // An allowlist replaces filtering: only listed parameters
+                // survive, even when they look like tracking parameters.
+                return allowlist.contains(key.as_str());
+            }
+            !(policy.strip_tracking_params
+                && crate::detrack::is_tracking_param_with(&key, &policy.extra_tracking_params))
+        })
         .collect::<Vec<_>>()
         .join("&")
 }

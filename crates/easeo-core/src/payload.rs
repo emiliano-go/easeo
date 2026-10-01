@@ -376,18 +376,37 @@ fn entity_default_robots(entity: &SEOEntity, config: &SEOConfig) -> crate::entit
     if entity.entity_type == EntityType::Search {
         return config.search_robots.clone();
     }
-    if entity
-        .status
-        .as_deref()
-        .is_some_and(|s| s.eq_ignore_ascii_case("published"))
-    {
-        return crate::entity::Robots {
+    match entity.status.as_deref() {
+        Some(s) if s.eq_ignore_ascii_case("published") => crate::entity::Robots {
             index: true,
             follow: true,
             ..Default::default()
-        };
+        },
+        // Any explicit non-published status (draft, archived, private, ...)
+        // must not be indexed.
+        Some(_) => crate::entity::Robots {
+            index: false,
+            follow: true,
+            ..Default::default()
+        },
+        None => config.default_robots.clone(),
     }
-    config.default_robots.clone()
+}
+
+fn validate_canonical_override(url: &str) -> Result<String, EaseoError> {
+    let value = url.trim();
+    let parsed = url::Url::parse(value).map_err(|e| {
+        EaseoError::InvalidUrl(format!(
+            "canonical_url override must be an absolute URL: {}",
+            e
+        ))
+    })?;
+    if parsed.scheme() != "http" && parsed.scheme() != "https" {
+        return Err(EaseoError::InvalidUrl(
+            "canonical_url override must use http or https".to_string(),
+        ));
+    }
+    Ok(value.to_string())
 }
 
 /// Builds a payload from an entity, route, config, optional overrides, and an
@@ -440,9 +459,12 @@ pub fn build_seo_payload(
     ])
     .unwrap_or_default();
 
-    // Canonical
+    // Canonical. canonical_url is trusted and only checked for absoluteness;
+    // canonical_path goes through the full normalization pipeline.
     let canonical = if let Some(ref url) = ov.canonical_url {
-        url.clone()
+        validate_canonical_override(url)?
+    } else if let Some(ref path) = ov.canonical_path {
+        normalize_public_url(path, config)?
     } else {
         normalize_public_url(route, config)?
     };

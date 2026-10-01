@@ -1,6 +1,6 @@
 {
   "name": "@easeo/next",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "easeo integration for Next.js",
   "main": "index.js",
   "types": "index.d.ts",
@@ -38,7 +38,7 @@
     "access": "public"
   },
   "peerDependencies": {
-    "@easeo/core": "^0.1.0",
+    "@easeo/core": "^0.2.0",
     "next": ">=13.0.0"
   }
 }

@@ -172,11 +172,15 @@ export interface SEOContractConfig {
 /** Options accepted by {@link normalizePath}. */
 export interface NormalizePathOptions {
   enforceHttps?: boolean;
+  /** Defaults to `false`: path case is preserved. */
   lowercasePaths?: boolean;
   trailingSlash?: "always" | "never" | "preserve";
   collapseDuplicateSlashes?: boolean;
   stripTrackingParams?: boolean;
+  /** Parameters kept even when they match a tracking pattern. */
   allowedQueryParams?: string[];
+  /** Extra parameter names to strip, on top of the built-in list. */
+  extraTrackingParams?: string[];
 }
 
 /** Rust-backed type-name introspection registry. */

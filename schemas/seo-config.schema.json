@@ -72,11 +72,12 @@
       "type": "object",
       "properties": {
         "enforce_https": { "type": "boolean", "default": true },
-        "lowercase_paths": { "type": "boolean", "default": true },
+        "lowercase_paths": { "type": "boolean", "default": false },
         "trailing_slash": { "type": "string", "enum": ["always", "never", "preserve"], "default": "never" },
         "collapse_duplicate_slashes": { "type": "boolean", "default": true },
         "strip_tracking_params": { "type": "boolean", "default": true },
-        "allowed_query_params": { "type": "array", "items": { "type": "string" } }
+        "allowed_query_params": { "type": "array", "items": { "type": "string" }, "description": "Parameters kept even when they match a tracking pattern" },
+        "extra_tracking_params": { "type": "array", "items": { "type": "string" }, "description": "Extra parameter names to strip, on top of the built-in list" }
       }
     },
     "robots": {

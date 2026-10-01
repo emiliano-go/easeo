@@ -196,7 +196,9 @@ pub struct SEOEntity {
     /// Full content as HTML. Used to derive a description when no excerpt is set.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub body_html: Option<String>,
-    /// Publication status. Anything other than `"publish"` becomes noindex.
+    /// Publication status. When set, `"published"` (case-insensitive) keeps
+    /// the page indexable; any other value becomes noindex. When unset, the
+    /// config `default_robots` applies.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<String>,
     /// Primary image for the entity.
@@ -246,9 +248,15 @@ pub struct SEOOverrides {
     /// Overrides the resolved description.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub meta_description: Option<String>,
-    /// Overrides the resolved canonical URL.
+    /// Overrides the resolved canonical URL. Trusted: the value is used
+    /// as-is after an absolute `http(s)` URL check, bypassing the URL policy.
+    /// Use [`Self::canonical_path`] when the value should be normalized.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub canonical_url: Option<String>,
+    /// Overrides the route used to build the canonical URL, through the full
+    /// URL normalization pipeline. Ignored when `canonical_url` is set.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub canonical_path: Option<String>,
     /// Overrides the resolved robots directives.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub robots: Option<Robots>,

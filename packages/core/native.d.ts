@@ -183,7 +183,7 @@ export interface NodeSeoConfig {
   defaultOgImage?: string
   /** Rewrite `http` to `https`. Defaults to `true`. */
   enforceHttps?: boolean
-  /** Lowercase path segments. Defaults to `true`. */
+  /** Lowercase path segments. Defaults to `false` (preserve case). */
   lowercasePaths?: boolean
   /** Trailing slash policy: `"always"`, `"never"`, or `"preserve"`. */
   trailingSlash?: string
@@ -191,8 +191,13 @@ export interface NodeSeoConfig {
   collapseDuplicateSlashes?: boolean
   /** Remove tracking parameters. Defaults to `true`. */
   stripTrackingParams?: boolean
-  /** Query parameters to keep when tracking parameters are stripped. */
+  /**
+   * Query parameters to keep when tracking parameters are stripped. A
+   * listed parameter is kept even when it matches a tracking pattern.
+   */
   allowedQueryParams?: Array<string>
+  /** Additional query parameter names to strip, on top of the built-in list. */
+  extraTrackingParams?: Array<string>
   /** Open Graph locale, for example `"en_US"`. */
   locale?: string
   /** Alternate locales. */
@@ -262,7 +267,10 @@ export interface NodeSeoEntity {
   slug?: string
   /** Full content as HTML, used to derive a snippet when no excerpt is set. */
   bodyHtml?: string
-  /** Publication status. Anything other than `publish` becomes noindex. */
+  /**
+   * Publication status. `"published"` (case-insensitive) keeps the page
+   * indexable; any other value becomes noindex.
+   */
   status?: string
   /** Absolute URL of the primary image. */
   image?: string
@@ -362,8 +370,16 @@ export interface NodeSeoOverrides {
   metaTitle?: string
   /** Overrides the resolved description. */
   metaDescription?: string
-  /** Overrides the resolved canonical URL. */
+  /**
+   * Overrides the resolved canonical URL. Trusted: used as-is after an
+   * absolute `http(s)` URL check, bypassing the URL policy.
+   */
   canonicalUrl?: string
+  /**
+   * Overrides the route used to build the canonical URL, through the full
+   * URL normalization pipeline. Ignored when `canonical_url` is set.
+   */
+  canonicalPath?: string
   /** Overrides the robots `index` directive. */
   robotsIndex?: boolean
   /** Overrides the robots `follow` directive. */
@@ -427,7 +443,7 @@ export interface NodeTwitter {
 }
 
 /** Normalizes a route path according to the given policy fields. */
-export declare function normalizePath(path: string, enforceHttps?: boolean | undefined | null, lowercasePaths?: boolean | undefined | null, trailingSlash?: string | undefined | null, collapseDuplicateSlashes?: boolean | undefined | null, stripTrackingParams?: boolean | undefined | null, allowedQueryParams?: Array<string> | undefined | null): string
+export declare function normalizePath(path: string, enforceHttps?: boolean | undefined | null, lowercasePaths?: boolean | undefined | null, trailingSlash?: string | undefined | null, collapseDuplicateSlashes?: boolean | undefined | null, stripTrackingParams?: boolean | undefined | null, allowedQueryParams?: Array<string> | undefined | null, extraTrackingParams?: Array<string> | undefined | null): string
 
 /** Resolves a path or URL against the configured public base URL. */
 export declare function normalizePublicUrl(urlOrPath: string, config: NodeSeoConfig): string

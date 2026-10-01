@@ -172,6 +172,197 @@ mod tests {
         assert_eq!(result, "/blog/hello");
     }
 
+    fn example_config() -> SEOConfig {
+        SEOConfig {
+            canonical_host: "example.com".to_string(),
+            public_base_url: "https://example.com".to_string(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn test_lowercase_paths_preserved_by_default() {
+        let payload = build_seo_payload(
+            &SEOEntity {
+                entity_type: EntityType::Product,
+                title: Some("Phone".to_string()),
+                ..Default::default()
+            },
+            "/Products/iPhone",
+            &example_config(),
+        )
+        .unwrap();
+        assert_eq!(payload.canonical, "https://example.com/Products/iPhone");
+    }
+
+    #[test]
+    fn test_lowercase_paths_opt_in() {
+        let config = SEOConfig {
+            url_policy: URLPolicy {
+                lowercase_paths: true,
+                ..Default::default()
+            },
+            ..example_config()
+        };
+        let payload = build_seo_payload(
+            &SEOEntity {
+                entity_type: EntityType::Product,
+                title: Some("Phone".to_string()),
+                ..Default::default()
+            },
+            "/Products/iPhone",
+            &config,
+        )
+        .unwrap();
+        assert_eq!(payload.canonical, "https://example.com/products/iphone");
+    }
+
+    #[test]
+    fn test_query_bytes_preserved_and_fragment_dropped() {
+        let result = normalize_public_url(
+            "/page?foo&a=1&a=2&q=hello%20world&utm_source=x#frag",
+            &example_config(),
+        )
+        .unwrap();
+        assert_eq!(
+            result,
+            "https://example.com/page?foo&a=1&a=2&q=hello%20world"
+        );
+    }
+
+    #[test]
+    fn test_percent_encoded_tracking_param_stripped() {
+        let result = normalize_public_url("/page?%75tm_source=x&q=1", &example_config()).unwrap();
+        assert_eq!(result, "https://example.com/page?q=1");
+    }
+
+    #[test]
+    fn test_extra_tracking_params() {
+        let config = SEOConfig {
+            url_policy: URLPolicy {
+                extra_tracking_params: vec!["tag".to_string()],
+                ..Default::default()
+            },
+            ..example_config()
+        };
+        let result = normalize_public_url("/products?tag=shoes&q=1", &config).unwrap();
+        assert_eq!(result, "https://example.com/products?q=1");
+    }
+
+    #[test]
+    fn test_app_params_survive_default_policy() {
+        let result = normalize_public_url(
+            "/search?keyword=rust&tag=shoes&ref=related&source=nav",
+            &example_config(),
+        )
+        .unwrap();
+        assert!(result.contains("keyword=rust"));
+        assert!(result.contains("tag=shoes"));
+        assert!(result.contains("ref=related"));
+        assert!(result.contains("source=nav"));
+    }
+
+    #[test]
+    fn test_allowlist_keeps_tracking_param() {
+        let config = SEOConfig {
+            url_policy: URLPolicy {
+                allowed_query_params: vec!["utm_source".to_string()],
+                ..Default::default()
+            },
+            ..example_config()
+        };
+        let result = normalize_public_url("/page?utm_source=x&q=1", &config).unwrap();
+        assert_eq!(result, "https://example.com/page?utm_source=x");
+    }
+
+    #[test]
+    fn test_non_published_status_noindex() {
+        let draft = build_seo_payload(
+            &SEOEntity {
+                entity_type: EntityType::Page,
+                title: Some("Draft".to_string()),
+                status: Some("draft".to_string()),
+                ..Default::default()
+            },
+            "/draft",
+            &example_config(),
+        )
+        .unwrap();
+        assert!(draft.robots.contains("noindex"));
+
+        let unset = build_seo_payload(
+            &SEOEntity {
+                entity_type: EntityType::Page,
+                title: Some("Page".to_string()),
+                ..Default::default()
+            },
+            "/page",
+            &example_config(),
+        )
+        .unwrap();
+        assert_eq!(unset.robots, "index,follow");
+    }
+
+    #[test]
+    fn test_canonical_path_override_is_normalized() {
+        let overrides = SEOOverrides {
+            canonical_path: Some("/Promo/".to_string()),
+            ..Default::default()
+        };
+        let payload = build_seo_payload_with_overrides(
+            &SEOEntity {
+                entity_type: EntityType::Page,
+                title: Some("Promo".to_string()),
+                ..Default::default()
+            },
+            "/ignored",
+            &example_config(),
+            &overrides,
+        )
+        .unwrap();
+        assert_eq!(payload.canonical, "https://example.com/Promo");
+    }
+
+    #[test]
+    fn test_relative_canonical_url_rejected() {
+        let overrides = SEOOverrides {
+            canonical_url: Some("/relative".to_string()),
+            ..Default::default()
+        };
+        assert!(build_seo_payload_with_overrides(
+            &SEOEntity {
+                entity_type: EntityType::Page,
+                title: Some("Page".to_string()),
+                ..Default::default()
+            },
+            "/page",
+            &example_config(),
+            &overrides,
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn test_video_schema_has_thumbnail_and_upload_date() {
+        let entity = SEOEntity {
+            entity_type: EntityType::Video,
+            title: Some("Episode 1".to_string()),
+            featured_image: Some(SEOImage {
+                url: "https://example.com/thumb.jpg".to_string(),
+                width: None,
+                height: None,
+                alt: None,
+            }),
+            published_at: Some("2026-01-15".to_string()),
+            ..Default::default()
+        };
+        let payload = build_seo_payload(&entity, "/video/ep-1", &example_config()).unwrap();
+        let schema = payload.schema_jsonld.unwrap();
+        assert_eq!(schema["@type"], "VideoObject");
+        assert_eq!(schema["thumbnailUrl"], "https://example.com/thumb.jpg");
+        assert_eq!(schema["uploadDate"], "2026-01-15");
+    }
+
     #[test]
     fn test_hash_deterministic() {
         let config = SEOConfig {

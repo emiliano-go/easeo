@@ -54,11 +54,17 @@ Controls canonical URL normalization.
 | Field | Type | Default |
 |---|---|---|
 | `enforce_https` | `bool` | `True` |
-| `lowercase_paths` | `bool` | `True` |
+| `lowercase_paths` | `bool` | `False` |
 | `trailing_slash` | `"always" \| "never" \| "preserve"` | `"never"` |
 | `collapse_duplicate_slashes` | `bool` | `True` |
 | `strip_tracking_params` | `bool` | `True` |
 | `allowed_query_params` | `list[str]` | `[]` |
+| `extra_tracking_params` | `list[str]` | `[]` |
+
+Path case is preserved by default because it can be significant. Set
+`lowercase_paths=True` to opt in. `strip_tracking_params` removes only
+unambiguous tracking names; add site-specific ones with
+`extra_tracking_params`.
 
 === "Python"
 

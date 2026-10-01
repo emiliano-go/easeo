@@ -146,6 +146,9 @@ class TestDetrack:
         assert "q=hello" in result
         assert "UTM_SOURCE" not in result
 
+    def test_clean_query_percent_encoded_key(self):
+        assert clean_query("%75tm_source=x&q=1") == "q=1"
+
     def test_clean_query_param_no_equals(self):
         result = clean_query("fbclid")
         assert "fbclid" not in result
@@ -255,6 +258,33 @@ class TestPayload:
         )
         payload = build_seo_payload(entity, "/test", default_config())
         assert payload.robots == "index,follow"
+
+    def test_non_published_status_becomes_noindex(self):
+        entity = SEOEntity(
+            entity_type="page",
+            title="Page",
+            status="draft",
+        )
+        payload = build_seo_payload(entity, "/test", default_config())
+        assert "noindex" in payload.robots
+
+    def test_unset_status_uses_config_default_robots(self):
+        entity = SEOEntity(entity_type="page", title="Page")
+        payload = build_seo_payload(entity, "/test", default_config())
+        assert payload.robots == "index,follow"
+
+    def test_video_schema_has_thumbnail_and_upload_date(self):
+        entity = SEOEntity(
+            entity_type="video",
+            title="Episode 1",
+            featured_image=SEOImage(url="https://example.com/thumb.jpg"),
+            published_at="2026-01-15",
+        )
+        payload = build_seo_payload(entity, "/video/ep-1", default_config())
+        schema = payload.schema_jsonld
+        assert schema["@type"] == "VideoObject"
+        assert schema["thumbnailUrl"] == "https://example.com/thumb.jpg"
+        assert schema["uploadDate"] == "2026-01-15"
 
     def test_relative_og_image_in_schema(self):
         entity = SEOEntity(
@@ -371,14 +401,21 @@ class TestValidation:
         issues = validate_payload(payload)
         assert any(i.rule_id == "EASEO104" for i in issues)
 
-    def test_relative_canonical_easeo105(self):
+    def test_relative_canonical_url_override_rejected(self):
         entity = SEOEntity(entity_type="page", title="Title")
         overrides = SEOOverrides(canonical_url="/relative/path")
+        with pytest.raises(Exception):
+            build_seo_payload_with_overrides(
+                entity, "/test", default_config(), overrides
+            )
+
+    def test_canonical_path_override_is_normalized(self):
+        entity = SEOEntity(entity_type="page", title="Title")
+        overrides = SEOOverrides(canonical_path="/Promo/")
         payload = build_seo_payload_with_overrides(
             entity, "/test", default_config(), overrides
         )
-        issues = validate_payload(payload)
-        assert any(i.rule_id == "EASEO105" for i in issues)
+        assert payload.canonical == "https://example.com/Promo"
 
     def test_absolute_canonical_no_issue(self):
         entity = SEOEntity(entity_type="page", title="Title")
@@ -573,16 +610,61 @@ class TestURLNormalizationAdditional:
 
     def test_normalize_public_url_strips_fragment(self):
         config = default_config()
-        result = normalize_public_url("/page#section", config)
-        assert "#section" in result
+        assert normalize_public_url("/page#section", config) == "https://example.com/page"
+        assert (
+            normalize_public_url("https://example.com/page#section", config)
+            == "https://example.com/page"
+        )
 
     def test_lowercase_paths_enabled(self):
         policy = URLPolicy(lowercase_paths=True)
         assert normalize_path("/Blog/Hello", policy) == "/blog/hello"
 
+    def test_lowercase_paths_preserved_by_default(self):
+        policy = URLPolicy()
+        assert normalize_path("/Products/iPhone", policy) == "/Products/iPhone"
+
     def test_filter_query_preserves_encoded_values(self):
         policy = URLPolicy(strip_tracking_params=False)
         assert normalize_public_url("https://example.com?q=hello%20world", default_config()).endswith("q=hello%20world")
+
+    def test_filter_query_preserves_bare_key_and_duplicates(self):
+        result = normalize_public_url(
+            "https://example.com?foo&a=1&a=2", default_config()
+        )
+        assert result.endswith("?foo&a=1&a=2")
+
+    def test_percent_encoded_tracking_param_stripped(self):
+        result = normalize_public_url(
+            "https://example.com?%75tm_source=x&q=1", default_config()
+        )
+        assert result.endswith("?q=1")
+
+    def test_app_params_survive_default_policy(self):
+        result = normalize_public_url(
+            "https://example.com/search?keyword=rust&tag=shoes&ref=related&source=nav",
+            default_config(),
+        )
+        for param in ("keyword=rust", "tag=shoes", "ref=related", "source=nav"):
+            assert param in result
+
+    def test_extra_tracking_params_strip_app_params(self):
+        config = SEOConfig(
+            canonical_host="example.com",
+            public_base_url="https://example.com",
+            url_policy=URLPolicy(extra_tracking_params=["tag"]),
+        )
+        result = normalize_public_url("/products?tag=shoes&q=1", config)
+        assert result.endswith("?q=1")
+
+    def test_allowlist_keeps_tracking_param(self):
+        config = SEOConfig(
+            canonical_host="example.com",
+            public_base_url="https://example.com",
+            url_policy=URLPolicy(allowed_query_params=["utm_source"]),
+        )
+        result = normalize_public_url("/page?utm_source=x&q=1", config)
+        assert result.endswith("?utm_source=x")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -966,15 +1048,12 @@ class TestValidationAdditional:
 
     def test_empty_payload_exact_issue_set(self):
         entity = SEOEntity(entity_type="page")
-        overrides = SEOOverrides(canonical_url="/relative")
-        payload = build_seo_payload_with_overrides(
-            entity, "/test", default_config(), overrides
-        )
+        payload = build_seo_payload(entity, "/test", default_config())
         issues = validate_payload(payload)
         rule_ids = {i.rule_id for i in issues}
         assert "EASEO101" in rule_ids
         assert "EASEO103" in rule_ids
-        assert "EASEO105" in rule_ids
+        assert "EASEO105" not in rule_ids
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1036,9 +1115,10 @@ class TestConfigAdditional:
     def test_url_policy_defaults(self):
         policy = URLPolicy()
         assert policy.enforce_https is True
-        assert policy.lowercase_paths is True
+        assert policy.lowercase_paths is False
         assert policy.collapse_duplicate_slashes is True
         assert policy.strip_tracking_params is True
+        assert policy.extra_tracking_params == []
 
     def test_config_defaults(self):
         config = SEOConfig(

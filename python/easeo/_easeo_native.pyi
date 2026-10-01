@@ -358,8 +358,8 @@ class SEOEntity:
             title: Page title.
             excerpt: Short description.
             body_html: Full content as HTML.
-            status: Publication status. Anything other than ``publish``
-                becomes noindex.
+            status: Publication status. ``"published"`` (case-insensitive)
+                keeps the page indexable; any other value becomes noindex.
             featured_image: Primary image.
             published_at: ISO date or datetime.
             updated_at: ISO date or datetime.
@@ -521,7 +521,7 @@ class SEOOverrides:
     """
     Per-call overrides that take precedence over the entity and config.
     """
-    def __new__(cls, /, *, meta_title: str |None = None, meta_description: str |None = None, canonical_url: str |None = None, robots: Robots |None = None, og_title: str |None = None, og_description: str |None = None, og_image: SEOImage |None = None, twitter_card: str |None = None, twitter_title: str |None = None, twitter_description: str |None = None, twitter_image: SEOImage |None = None, schema_jsonld: Any |None = None, omit_schema: bool = False, skip_title_template: bool = False, twitter_creator: str |None = None, og_audio: str |None = None, og_video: str |None = None) -> SEOOverrides:
+    def __new__(cls, /, *, meta_title: str |None = None, meta_description: str |None = None, canonical_url: str |None = None, canonical_path: str |None = None, robots: Robots |None = None, og_title: str |None = None, og_description: str |None = None, og_image: SEOImage |None = None, twitter_card: str |None = None, twitter_title: str |None = None, twitter_description: str |None = None, twitter_image: SEOImage |None = None, schema_jsonld: Any |None = None, omit_schema: bool = False, skip_title_template: bool = False, twitter_creator: str |None = None, og_audio: str |None = None, og_video: str |None = None) -> SEOOverrides:
         """
         Creates per-call overrides. All arguments are keyword-only and
         optional.
@@ -529,7 +529,11 @@ class SEOOverrides:
         Args:
             meta_title: Overrides the resolved title.
             meta_description: Overrides the resolved description.
-            canonical_url: Overrides the resolved canonical URL.
+            canonical_url: Overrides the resolved canonical URL. Trusted:
+                used as-is after an absolute ``http(s)`` URL check.
+            canonical_path: Overrides the route used to build the canonical
+                URL, normalized through the URL policy. Ignored when
+                ``canonical_url`` is set.
             robots: Overrides the robots directives.
             og_title: Overrides the Open Graph title.
             og_description: Overrides the Open Graph description.
@@ -725,22 +729,24 @@ class URLPolicy:
     """
     Controls how canonical URLs are normalized.
     """
-    def __new__(cls, /, *, enforce_https: bool = True, lowercase_paths: bool = True, trailing_slash: str = "never", collapse_duplicate_slashes: bool = True, strip_tracking_params: bool = True, allowed_query_params: Sequence[str] |None = None) -> URLPolicy:
+    def __new__(cls, /, *, enforce_https: bool = True, lowercase_paths: bool = False, trailing_slash: str = "never", collapse_duplicate_slashes: bool = True, strip_tracking_params: bool = True, allowed_query_params: Sequence[str] |None = None, extra_tracking_params: Sequence[str] |None = None) -> URLPolicy:
         """
         Creates a URL policy. All arguments are keyword-only.
         
         Args:
             enforce_https: Rewrite ``http`` to ``https``.
-            lowercase_paths: Lowercase path segments.
+            lowercase_paths: Lowercase path segments. Defaults to ``False``.
             trailing_slash: ``"always"``, ``"never"``, or ``"preserve"``.
             collapse_duplicate_slashes: Collapse repeated slashes.
             strip_tracking_params: Remove tracking parameters.
             allowed_query_params: Query parameters to keep.
+            extra_tracking_params: Extra parameter names to strip.
         """
     @property
     def allowed_query_params(self, /) -> list[str]:
         """
-        Query parameters to keep when tracking parameters are stripped.
+        Query parameters to keep when tracking parameters are stripped. A
+        listed parameter is kept even when it matches a tracking pattern.
         """
     @property
     def collapse_duplicate_slashes(self, /) -> bool:
@@ -753,9 +759,16 @@ class URLPolicy:
         Whether ``http`` is rewritten to ``https``.
         """
     @property
+    def extra_tracking_params(self, /) -> list[str]:
+        """
+        Additional query parameter names to strip, on top of the built-in
+        tracking list.
+        """
+    @property
     def lowercase_paths(self, /) -> bool:
         """
-        Whether path segments are lowercased.
+        Whether path segments are lowercased. Off by default: path case is
+        preserved because it can be significant.
         """
     @property
     def strip_tracking_params(self, /) -> bool:

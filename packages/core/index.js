@@ -479,7 +479,8 @@ function normalizePath(path, options) {
       options?.trailingSlash,
       options?.collapseDuplicateSlashes,
       options?.stripTrackingParams,
-      options?.allowedQueryParams
+      options?.allowedQueryParams,
+      options?.extraTrackingParams
     )
   );
 }

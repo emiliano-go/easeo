@@ -18,7 +18,7 @@ optional.
 | `excerpt` | `str \| None` | Description, `og:description` |
 | `body_html` | `str \| None` | Description snippet when no excerpt |
 | `slug` | `str \| None` | Metadata only, not emitted |
-| `status` | `str \| None` | Robots (`"published"` allows indexing) |
+| `status` | `str \| None` | Robots (`"published"` allows indexing; any other value is noindex) |
 | `featured_image` | `SEOImage \| str \| None` | `og:image` and schema image |
 | `published_at` | `str \| None` | Schema `datePublished` |
 | `updated_at` | `str \| None` | Schema `dateModified` |

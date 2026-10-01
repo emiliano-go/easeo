@@ -13,10 +13,10 @@ or extend it. The result is exposed as `schema_jsonld` (Python) or
 
 | Schema | Built from | Key fields |
 |---|---|---|
-| `Article` | `post`, `video` | headline, dates, author, publisher |
+| `Article` | `post` | headline, dates, author, publisher |
 | `WebSite` | `home` | name, url, description, optional `SearchAction` |
 | `WebPage` | `page` | name, url, description |
-| `VideoObject` | `video` | name, url, description |
+| `VideoObject` | `video` | name, url, description, `thumbnailUrl`, `uploadDate` |
 | `CollectionPage` | `taxonomy` | name, url |
 | `SearchResultsPage` | `search` | name, url |
 | `Product` | `product` | sku, offers (price, currency, availability) |
@@ -27,6 +27,21 @@ or extend it. The result is exposed as `schema_jsonld` (Python) or
 
 Breadcrumbs are always appended as a `BreadcrumbList`. When a page has both a
 main schema and breadcrumbs, `schema_jsonld` becomes a list of two objects.
+
+## Schema depth { #depth }
+
+Built-in schemas are intentionally minimal: they cover the fields a page can
+supply and the properties search engines commonly consume, not the full
+Schema.org vocabulary. Two examples:
+
+* `VideoObject` adds `thumbnailUrl` and `uploadDate`, but does not model
+  duration, `contentUrl`, or `embedUrl`.
+* `LocalBusiness.address` is a single `PostalAddress.streetAddress` string;
+  locality, region, postal code, and country are not modeled.
+
+When a page needs deeper modeling, replace the schema per page with
+`SEOOverrides.schema_jsonld`, or register a generator per type with
+`SchemaRegistry` (both shown below).
 
 ## Three ways to control it { #control }
 

@@ -101,8 +101,8 @@ class SEOEntityBuilder:
         return self
 
     def status(self, value: str) -> SEOEntityBuilder:
-        """Sets the publication status. Anything other than ``publish``
-        becomes noindex.
+        """Sets the publication status. ``"published"`` (case-insensitive)
+        keeps the page indexable; any other value becomes noindex.
 
         Args:
             value: Publication status.

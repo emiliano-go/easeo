@@ -28,14 +28,28 @@ Controlled by `URLPolicy`:
 |---|---|---|
 | Ensure leading slash | always | `/blog` and `blog` both become `/blog` |
 | Collapse duplicate slashes | `True` | `/a//b` becomes `/a/b` |
-| Lowercase | `True` | `/Blog/Post` becomes `/blog/post` |
+| Lowercase | `False` | Path case is preserved; `/Products/iPhone` stays as written. Set `lowercase_paths=True` to lowercase |
 | Trailing slash | `"never"` | `/blog/` becomes `/blog`; use `"always"` or `"preserve"` to change |
 | Enforce HTTPS | `True` | `http://` becomes `https://` |
 
+Fragments are always dropped: a canonical URL never carries one, whether the
+input is an absolute URL or a relative path.
+
 ## Query filtering { #query }
 
-Tracking parameters are stripped using the absorbed detrack engine. When
-`allowed_query_params` is non-empty, only those parameters survive.
+Tracking parameters are stripped using the absorbed detrack engine. The
+built-in list is deliberately narrow: UTM parameters, vendor click ids
+(`fbclid`, `gclid`, `msclkid`, ...), and unambiguous session identifiers.
+Names that applications commonly use for real content (`ref`, `source`,
+`tag`, `keyword`, `campaign`, `redirect`, `next`, `timestamp`, ...) are kept
+by default. Add site-specific names with `extra_tracking_params`.
+
+Parameter keys are decoded before matching, so `%75tm_source` is recognized as
+`utm_source`, while the emitted query preserves the original bytes, order, and
+duplicates.
+
+When `allowed_query_params` is non-empty, only those parameters survive, even
+when one of them looks like a tracking parameter.
 
 === "Python"
 
