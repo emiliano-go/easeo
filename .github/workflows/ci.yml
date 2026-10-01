@@ -79,7 +79,7 @@ jobs:
       - name: Install TypeScript
         run: npm install -g typescript
       - name: Type-check the declarations
-        run: tsc --noEmit --strict --lib es2022,dom --module esnext --moduleResolution bundler tests/javascript/types-consumer.ts
+        run: tsc --noEmit --strict --lib "es2022,dom" --module esnext --moduleResolution bundler tests/javascript/types-consumer.ts
       - name: Run Node tests
         # bash expands the glob on every runner; pwsh on Windows does not,
         # and `node --test <dir>` is not supported on Node 20/22.
