@@ -1,21 +1,39 @@
 {
   "name": "@easeo/core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Deterministic SEO payload generation for content platforms",
   "main": "index.js",
   "types": "index.d.ts",
   "license": "MIT",
+  "keywords": [
+    "seo",
+    "canonical-url",
+    "open-graph",
+    "twitter-cards",
+    "json-ld",
+    "metadata"
+  ],
+  "homepage": "https://easeo.emiliano-go.com",
   "repository": {
     "type": "git",
-    "url": "https://github.com/emiliano-go/easeo"
+    "url": "git+https://github.com/emiliano-go/easeo.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/emiliano-go/easeo/issues"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "files": [
     "index.js",
     "index.d.ts",
+    "native.js",
+    "native.d.ts",
     "*.node"
   ],
   "scripts": {
-    "build": "napi build --platform --release"
+    "build": "bash ../../scripts/generate_node_bindings.sh"
   },
   "napi": {
     "binaryName": "easeo"
@@ -26,5 +44,8 @@
   },
   "devDependencies": {
     "@napi-rs/cli": "^3.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

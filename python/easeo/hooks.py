@@ -53,11 +53,22 @@ class HookRegistry:
     """
 
     def __init__(self) -> None:
+        """Creates an empty, thread-safe registry."""
         self._hooks: dict[str, list[HookFunc]] = {}
         self._lock = threading.Lock()
 
     def register(self, name: str, fn: HookFunc) -> None:
-        """Register *fn* to run when hook *name* is triggered."""
+        """Registers ``fn`` to run when hook ``name`` is triggered.
+
+        Args:
+            name: Hook name, for example ``"post_process"``.
+            fn: Callable receiving ``(payload, entity, config)`` and returning
+                the payload.
+
+        Raises:
+            ValueError: If ``name`` is not a non-empty string or ``fn`` is not
+                callable.
+        """
         if not isinstance(name, str) or not name.strip():
             raise ValueError("hook name must be a non-empty string")
         if not callable(fn):
@@ -66,7 +77,14 @@ class HookRegistry:
             self._hooks.setdefault(name, []).append(fn)
 
     def hook(self, name: str) -> Callable[[HookFunc], HookFunc]:
-        """Decorator form of :meth:`register`."""
+        """Decorator form of :meth:`register`.
+
+        Args:
+            name: Hook name to register the decorated function under.
+
+        Returns:
+            A decorator that registers and returns the wrapped function.
+        """
 
         def decorator(fn: HookFunc) -> HookFunc:
             self.register(name, fn)
@@ -80,14 +98,29 @@ class HookRegistry:
         return decorator
 
     def unregister(self, name: str, fn: HookFunc) -> None:
-        """Remove a previously registered hook (no-op if absent)."""
+        """Removes a previously registered hook.
+
+        Args:
+            name: Hook name the function was registered under.
+            fn: Function to remove. No-op when it is not registered.
+        """
         with self._lock:
             hooks = self._hooks.get(name)
             if hooks and fn in hooks:
                 hooks.remove(fn)
 
     def run(self, name: str, payload: dict, entity: "SEOEntity", config: "SEOConfig") -> dict:
-        """Run all hooks registered under *name*, in registration order."""
+        """Runs all hooks registered under ``name``, in registration order.
+
+        Args:
+            name: Hook name to run.
+            payload: Payload dictionary, updated by each hook in turn.
+            entity: Entity the payload was built from.
+            config: Configuration the payload was built with.
+
+        Returns:
+            The payload after all hooks have run.
+        """
         with self._lock:
             hooks = list(self._hooks.get(name, []))
         for fn in hooks:
@@ -95,7 +128,11 @@ class HookRegistry:
         return payload
 
     def clear(self, name: str | None = None) -> None:
-        """Remove all hooks, or only those under *name*."""
+        """Removes all hooks, or only those under ``name``.
+
+        Args:
+            name: Hook name to clear. When ``None``, clears everything.
+        """
         with self._lock:
             if name is not None:
                 self._hooks.pop(name, None)
@@ -103,11 +140,12 @@ class HookRegistry:
                 self._hooks.clear()
 
     def get_registered(self) -> dict[str, list[HookFunc]]:
-        """Return a copy of all registered hooks (for inspection / tests)."""
+        """Returns a copy of all registered hooks, for inspection and tests."""
         with self._lock:
             return {k: list(v) for k, v in self._hooks.items()}
 
     def __len__(self) -> int:
+        """Returns the total number of registered hook functions."""
         with self._lock:
             return sum(len(v) for v in self._hooks.values())
 

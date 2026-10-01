@@ -19,12 +19,14 @@ pub struct SchemaRegistry {
 }
 
 impl SchemaRegistry {
+    /// Creates an empty registry.
     pub fn new() -> Self {
         Self {
             builders: BTreeMap::new(),
         }
     }
 
+    /// Registers a builder for a schema type, replacing any existing builder.
     pub fn register<F>(&mut self, schema_type: &str, builder: F)
     where
         F: Fn(&SchemaContext) -> serde_json::Value + Send + Sync + 'static,
@@ -33,6 +35,7 @@ impl SchemaRegistry {
             .insert(schema_type.to_string(), Box::new(builder));
     }
 
+    /// Returns the builder registered for a schema type.
     pub fn get(
         &self,
         schema_type: &str,
@@ -40,10 +43,12 @@ impl SchemaRegistry {
         self.builders.get(schema_type).map(|b| b.as_ref())
     }
 
+    /// Returns whether a builder is registered for a schema type.
     pub fn has(&self, schema_type: &str) -> bool {
         self.builders.contains_key(schema_type)
     }
 
+    /// Lists all registered schema types.
     pub fn list_types(&self) -> Vec<String> {
         self.builders.keys().cloned().collect()
     }

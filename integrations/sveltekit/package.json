@@ -1,11 +1,26 @@
 {
   "name": "@easeo/sveltekit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "easeo integration for SvelteKit",
   "type": "module",
   "main": "index.js",
   "types": "index.d.ts",
   "svelte": "./index.js",
+  "keywords": [
+    "seo",
+    "sveltekit",
+    "svelte",
+    "metadata",
+    "open-graph",
+    "json-ld"
+  ],
+  "homepage": "https://easeo.emiliano-go.com/integrations/sveltekit/",
+  "bugs": {
+    "url": "https://github.com/emiliano-go/easeo/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "exports": {
     ".": {
       "types": "./index.d.ts",
@@ -26,7 +41,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/emiliano-go/easeo",
+    "url": "git+https://github.com/emiliano-go/easeo.git",
     "directory": "integrations/sveltekit"
   },
   "publishConfig": {

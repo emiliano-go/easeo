@@ -95,7 +95,7 @@ def _get_route(context: Any) -> str:
 
 @register.simple_tag(takes_context=True)
 def easeo_head(context: Any, entity: Any, route: str) -> str:
-    """Render SEO <head> tags for a Django template.
+    """Renders SEO head tags for a Django template.
 
     Usage::
 
@@ -103,6 +103,15 @@ def easeo_head(context: Any, entity: Any, route: str) -> str:
         <head>
             {% easeo_head entity request.path %}
         </head>
+
+    Args:
+        context: Template context, provided by the tag.
+        entity: Object exposing ``entity_type``, ``title``, and ``excerpt``
+            or ``description`` attributes.
+        route: Route path for the page.
+
+    Returns:
+        Safe HTML for the full head snippet.
     """
     from easeo import build_seo_payload
     from easeo.adapters._common import build_entity
@@ -115,7 +124,16 @@ def easeo_head(context: Any, entity: Any, route: str) -> str:
 
 @register.simple_tag(takes_context=True)
 def easeo_title(context: Any, entity: Any) -> str:
-    """Render just the <title> tag."""
+    """Renders just the title tag.
+
+    Args:
+        context: Template context, provided by the tag.
+        entity: Object exposing ``entity_type``, ``title``, and ``excerpt``
+            or ``description`` attributes.
+
+    Returns:
+        Safe HTML for the title tag.
+    """
     from easeo import build_seo_payload
     from easeo.adapters._common import build_entity
 
@@ -128,7 +146,16 @@ def easeo_title(context: Any, entity: Any) -> str:
 
 @register.simple_tag(takes_context=True)
 def easeo_meta(context: Any, entity: Any) -> str:
-    """Render meta description tag."""
+    """Renders the meta description tag.
+
+    Args:
+        context: Template context, provided by the tag.
+        entity: Object exposing ``entity_type``, ``title``, and ``excerpt``
+            or ``description`` attributes.
+
+    Returns:
+        Safe HTML for the meta description tag.
+    """
     from easeo import build_seo_payload
     from easeo.adapters._common import build_entity
 
@@ -141,7 +168,18 @@ def easeo_meta(context: Any, entity: Any) -> str:
 
 
 def seo_head(entity: Any, route: str, config: Any = None) -> str:
-    """Render SEO <head> tags (function-based API)."""
+    """Renders the SEO head snippet outside a template tag.
+
+    Args:
+        entity: Object exposing ``entity_type``, ``title``, and ``excerpt``
+            or ``description`` attributes.
+        route: Route path for the page.
+        config: Optional configuration. Falls back to the ``EASEO`` Django
+            setting when omitted.
+
+    Returns:
+        The rendered head HTML.
+    """
     from easeo import build_seo_payload
     from easeo.adapters._common import build_entity
 

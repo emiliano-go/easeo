@@ -3,6 +3,13 @@ use crate::error::EaseoError;
 
 const SEARCH_TERM_PLACEHOLDER: &str = "{search_term_string}";
 
+/// Builds a page schema (`WebSite`, `WebPage`, `CollectionPage`,
+/// `SearchResultsPage`, or `VideoObject`). `WebSite` also emits a
+/// `SearchAction` when the config provides a search URL template.
+///
+/// # Errors
+///
+/// Returns [`EaseoError`] when the schema cannot be constructed.
 pub fn build_website(
     schema_type: &str,
     ctx: &SchemaContext,

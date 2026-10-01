@@ -1,18 +1,63 @@
+//! Deterministic SEO metadata generation for content platforms.
+//!
+//! `easeo-core` is a pure library with no I/O dependencies. Given the same
+//! entity, route, and configuration it always produces the same payload, which
+//! makes the output safe to snapshot, hash, cache, and diff.
+//!
+//! # Example
+//!
+//! ```
+//! use easeo_core::{build_seo_payload, EntityType, SEOConfig, SEOEntity};
+//!
+//! let config = SEOConfig {
+//!     canonical_host: "example.com".into(),
+//!     public_base_url: "https://example.com".into(),
+//!     ..Default::default()
+//! };
+//!
+//! let entity = SEOEntity {
+//!     entity_type: EntityType::Post,
+//!     title: Some("Hello World".into()),
+//!     ..Default::default()
+//! };
+//!
+//! let payload = build_seo_payload(&entity, "/blog/hello", &config).unwrap();
+//! assert_eq!(payload.canonical, "https://example.com/blog/hello");
+//! ```
+
+#![warn(missing_docs)]
+
+/// Breadcrumb trail building.
 pub mod breadcrumbs;
+/// Canonical URL resolution.
 pub mod canonical;
+/// Site-wide configuration types.
 pub mod config;
+/// SEO contract definition and generation.
 pub mod contract;
+/// Tracking parameter removal.
 pub mod detrack;
+/// Content entity model.
 pub mod entity;
+/// Error types.
 pub mod error;
+/// Payload hashing and ETags.
 pub mod hashing;
+/// JSON-LD schema generation.
 pub mod jsonld;
+/// Open Graph payload types.
 pub mod opengraph;
+/// The SEO payload builder and output model.
 pub mod payload;
+/// Robots directive types.
 pub mod robots;
+/// HTML text extraction helpers.
 pub mod text;
+/// Twitter Card payload types.
 pub mod twitter;
+/// URL normalization helpers.
 pub mod url;
+/// Payload validation.
 pub mod validation;
 
 pub use config::{SEOConfig, TrailingSlash, URLPolicy};
@@ -29,6 +74,11 @@ pub use payload::{OGPayload, SEOPayload, TwitterPayload};
 
 use entity as entity_mod;
 
+/// Builds a deterministic SEO payload for an entity at a route.
+///
+/// # Errors
+///
+/// Returns [`EaseoError`] when the entity, route, or configuration is invalid.
 pub fn build_seo_payload(
     entity: &SEOEntity,
     route: &str,
@@ -37,6 +87,12 @@ pub fn build_seo_payload(
     payload::build_seo_payload(entity, route, config, None, None)
 }
 
+/// Builds a payload with per-call overrides, which take the highest precedence.
+///
+/// # Errors
+///
+/// Returns [`EaseoError`] when the entity, route, overrides, or configuration
+/// is invalid.
 pub fn build_seo_payload_with_overrides(
     entity: &SEOEntity,
     route: &str,
@@ -46,20 +102,36 @@ pub fn build_seo_payload_with_overrides(
     payload::build_seo_payload(entity, route, config, Some(overrides), None)
 }
 
+/// Builds a machine-readable SEO contract from the given configuration.
+///
+/// # Errors
+///
+/// Returns [`EaseoError`] when the contract configuration is invalid.
 pub fn build_seo_contract(
     config: &contract::SEOContractConfig,
 ) -> Result<contract::SEOContract, EaseoError> {
     contract::build_contract(config)
 }
 
+/// Runs the built-in validation checks against a payload.
 pub fn validate_payload(payload: &SEOPayload) -> Vec<validation::SEOIssue> {
     validation::validate(payload)
 }
 
+/// Returns the SHA-256 hash of the payload.
+///
+/// # Errors
+///
+/// Returns [`EaseoError`] when the payload cannot be serialized.
 pub fn hash_payload(payload: &SEOPayload) -> Result<String, error::EaseoError> {
     hashing::hash_payload(payload)
 }
 
+/// Returns a quoted HTTP ETag for the payload.
+///
+/// # Errors
+///
+/// Returns [`EaseoError`] when the payload cannot be serialized.
 pub fn etag_payload(payload: &SEOPayload) -> Result<String, error::EaseoError> {
     hashing::etag_payload(payload)
 }

@@ -1,6 +1,14 @@
 use crate::config::{SEOConfig, TrailingSlash, URLPolicy};
 use crate::error::EaseoError;
 
+/// Normalizes a route path according to the URL policy.
+///
+/// Ensures a leading slash, collapses duplicate slashes, applies casing, and
+/// applies the trailing slash policy.
+///
+/// # Errors
+///
+/// Returns [`EaseoError`] when the path cannot be normalized.
 pub fn normalize_path(path: &str, policy: &URLPolicy) -> Result<String, EaseoError> {
     let mut value = path.trim().to_string();
     if value.is_empty() {
@@ -19,6 +27,13 @@ pub fn normalize_path(path: &str, policy: &URLPolicy) -> Result<String, EaseoErr
     Ok(value)
 }
 
+/// Resolves a path or URL against the configured public base URL and applies
+/// the URL policy.
+///
+/// # Errors
+///
+/// Returns [`EaseoError`] when the input is empty, `public_base_url` is
+/// invalid, or the URL cannot be normalized.
 pub fn normalize_public_url(url_or_path: &str, config: &SEOConfig) -> Result<String, EaseoError> {
     let value = url_or_path.trim().to_string();
     if value.is_empty() {

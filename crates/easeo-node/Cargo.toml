@@ -11,8 +11,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 easeo-core.workspace = true
-napi = { version = "2", features = ["serde-json"] }
-napi-derive = "2"
+napi = { version = "3", features = ["serde-json"] }
+napi-derive = "3"
 serde = { version = "1", features = ["derive"] }
 serde_json.workspace = true
 

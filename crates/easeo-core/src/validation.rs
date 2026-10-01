@@ -2,24 +2,39 @@ use crate::payload::SEOPayload;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
+/// Severity of a validation issue.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Severity {
+    /// A problem that likely breaks metadata.
     Error,
+    /// A recommended improvement.
     Warning,
+    /// Informational note.
     Info,
 }
 
+/// A single validation finding.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SEOIssue {
+    /// Stable rule identifier, for example `"EASEO101"`.
     pub rule_id: String,
+    /// Severity of the finding.
     pub severity: Severity,
+    /// Human readable description of the finding.
     pub message: String,
+    /// Canonical URL the finding applies to.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
+    /// Additional structured details about the finding.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub details: BTreeMap<String, serde_json::Value>,
 }
 
+/// Runs the built-in validation checks against a payload.
+///
+/// Checks cover title presence and length, description presence and length,
+/// canonical absoluteness, Open Graph image presence and absoluteness, and
+/// robots directive validity.
 pub fn validate(payload: &SEOPayload) -> Vec<SEOIssue> {
     let mut issues = Vec::new();
 

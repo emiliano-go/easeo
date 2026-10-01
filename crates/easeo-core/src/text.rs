@@ -1,3 +1,6 @@
+/// Builds a plain text description from HTML, truncating to `max_len`
+/// characters with an ellipsis when needed. Returns `None` when the input is
+/// missing or produces no text.
 pub fn build_description_snippet(body_html: Option<&str>, max_len: usize) -> Option<String> {
     let html = body_html?;
     let text = html_to_text(html);
@@ -13,6 +16,8 @@ pub fn build_description_snippet(body_html: Option<&str>, max_len: usize) -> Opt
     }
 }
 
+/// Strips HTML tags, including `script`, `style`, and `noscript` blocks, and
+/// collapses whitespace.
 pub fn html_to_text(html: &str) -> String {
     let mut text = String::new();
     let mut chars = html.chars().peekable();

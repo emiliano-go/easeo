@@ -3,7 +3,7 @@
 This package provides Python bindings for the easeo Rust core.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 from easeo._easeo_native import (
     # Types

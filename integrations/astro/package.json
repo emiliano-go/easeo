@@ -1,9 +1,23 @@
 {
   "name": "@easeo/astro",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "easeo integration for Astro",
   "main": "index.js",
   "types": "index.d.ts",
+  "keywords": [
+    "seo",
+    "astro",
+    "metadata",
+    "open-graph",
+    "json-ld"
+  ],
+  "homepage": "https://easeo.emiliano-go.com/integrations/astro/",
+  "bugs": {
+    "url": "https://github.com/emiliano-go/easeo/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "exports": {
     ".": {
       "types": "./index.d.ts",
@@ -17,7 +31,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/emiliano-go/easeo",
+    "url": "git+https://github.com/emiliano-go/easeo.git",
     "directory": "integrations/astro"
   },
   "publishConfig": {

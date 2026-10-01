@@ -1,6 +1,11 @@
 use super::{base_schema, SchemaContext};
 use crate::error::EaseoError;
 
+/// Builds a `FAQPage` schema from the entity FAQ items.
+///
+/// # Errors
+///
+/// Returns [`EaseoError`] when the schema cannot be constructed.
 pub fn build_faq_page(ctx: &SchemaContext) -> Result<serde_json::Value, EaseoError> {
     let mut schema = base_schema("FAQPage", ctx)?;
 

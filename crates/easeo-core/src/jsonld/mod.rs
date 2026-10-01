@@ -1,10 +1,18 @@
+/// Article and blog posting schemas.
 pub mod article;
+/// Breadcrumb list schemas.
 pub mod breadcrumb;
+/// FAQ page schemas.
 pub mod faq;
+/// LocalBusiness schemas.
 pub mod local_business;
+/// Organization schemas.
 pub mod organization;
+/// Product schemas.
 pub mod product;
+/// Custom schema registries.
 pub mod registry;
+/// WebSite, WebPage, and related page schemas.
 pub mod website;
 
 use crate::config::SEOConfig;
@@ -12,16 +20,32 @@ use crate::entity::SEOEntity;
 use crate::error::EaseoError;
 use registry::SchemaRegistry;
 
+/// Inputs available to JSON-LD schema builders.
 pub struct SchemaContext<'a> {
+    /// Entity the schema describes.
     pub entity: &'a SEOEntity,
+    /// Site-wide configuration.
     pub config: &'a SEOConfig,
+    /// Resolved canonical URL.
     pub canonical: &'a str,
+    /// Resolved title.
     pub title: &'a str,
+    /// Resolved description.
     pub description: Option<&'a str>,
+    /// Resolved Open Graph image URL.
     pub og_image: Option<&'a str>,
+    /// Optional custom schema registry.
     pub registry: Option<&'a SchemaRegistry>,
 }
 
+/// Builds the JSON-LD schema for the entity in the context.
+///
+/// Returns `None` when the entity type maps to no schema. Falls back to a
+/// custom registry builder, then to a generic page schema, for unknown types.
+///
+/// # Errors
+///
+/// Returns [`EaseoError`] when schema construction fails.
 pub fn build_schema(ctx: &SchemaContext) -> Result<Option<serde_json::Value>, EaseoError> {
     let schema_type = match ctx
         .config

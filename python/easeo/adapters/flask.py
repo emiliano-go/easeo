@@ -25,12 +25,26 @@ class Easeo:
     """
 
     def __init__(self, app: Any = None, config: Any = None) -> None:
+        """Creates the helper, optionally registering it on an app.
+
+        Args:
+            app: Flask application. When provided, :meth:`init_app` is called
+                immediately.
+            config: Site-wide configuration.
+        """
         self.config = config
         if app is not None:
             self.init_app(app)
 
     def init_app(self, app: Any) -> None:
-        """Initialize with a Flask app."""
+        """Registers the ``easeo_head`` template helper on the app.
+
+        Args:
+            app: Flask application.
+
+        Raises:
+            ValueError: If no configuration was provided.
+        """
         if self.config is None:
             raise ValueError("config must be provided before init_app")
 
@@ -49,7 +63,19 @@ class Easeo:
             return dict(easeo_head=seo_head)
 
     def for_entity(self, entity: Any, route: str) -> dict:
-        """Build SEO payload for a given entity and route."""
+        """Builds the SEO payload for an entity at a route.
+
+        Args:
+            entity: Object exposing ``entity_type``, ``title``, and
+                ``excerpt`` or ``description`` attributes.
+            route: Route path, for example ``"/blog/hello"``.
+
+        Returns:
+            The payload as a plain dictionary.
+
+        Raises:
+            ValueError: If no configuration was provided.
+        """
         from easeo import build_seo_payload
         from easeo.adapters._common import build_entity
 

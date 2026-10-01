@@ -2,6 +2,11 @@ use crate::config::SEOConfig;
 use crate::entity::Breadcrumb;
 use crate::url::normalize_public_url;
 
+/// Builds a `BreadcrumbList` JSON-LD schema from a breadcrumb trail.
+///
+/// # Errors
+///
+/// Returns [`crate::EaseoError`] when a breadcrumb URL cannot be resolved.
 pub fn build_breadcrumb_list(
     breadcrumbs: &[Breadcrumb],
     config: &SEOConfig,

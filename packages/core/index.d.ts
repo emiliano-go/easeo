@@ -1,342 +1,76 @@
-export interface SEOConfig {
-  canonicalHost: string;
-  publicBaseUrl: string;
-  siteName?: string;
-  titleTemplate?: string;
-  defaultOgImage?: string;
-  enforceHttps?: boolean;
-  lowercasePaths?: boolean;
-  trailingSlash?: "always" | "never" | "preserve";
-  collapseDuplicateSlashes?: boolean;
-  stripTrackingParams?: boolean;
-  allowedQueryParams?: string[];
-  locale?: string;
-  localeAlternate?: string[];
-  twitterSite?: string;
-  publisherName?: string;
-  publisherLogo?: string;
-  autoGenerateSchema?: boolean;
-  /** Emit `console.warn` for validation issues during the build. */
-  emitWarnings?: boolean;
-  defaultRobotsIndex?: boolean;
-  defaultRobotsFollow?: boolean;
-  searchRobotsIndex?: boolean;
-  searchRobotsFollow?: boolean;
-  schemaTypeMapJson?: string;
-  /**
-   * Search URL template for the homepage `WebSite` schema. Setting it adds a
-   * `SearchAction`; use `{search_term_string}` as the placeholder.
-   */
-  searchUrlTemplate?: string;
-  /** Config-scoped hooks, run after the payload is built. */
-  hooks?: HookRegistry;
-  /** Config-scoped custom JSON-LD generators. */
-  schemaRegistry?: SchemaRegistry;
-}
+/* Type declarations for @easeo/core.
+ *
+ * The Rust-generated record types live in `native.d.ts`. This file declares
+ * the JavaScript wrapper surface: the payload and contract wrappers, the
+ * extension points, the factories, and the error classes. It also augments
+ * the native config with the JavaScript-only extension fields.
+ *
+ * The native declarations use the Rust struct names (`NodeSeoConfig` and
+ * friends); this file exports them under the public names.
+ */
 
-export interface SEOImage {
-  url: string;
-  width?: number;
-  height?: number;
-  alt?: string;
-}
+export type {
+  NodeBreadcrumb as Breadcrumb,
+  NodeCleanResult as CleanResult,
+  NodeContractSite as ContractSite,
+  NodeFaqItem as FAQItem,
+  NodeOpenGraph as OGPayload,
+  NodeTwitter as TwitterPayload,
+  NodeSeoConfig as SEOConfig,
+  NodeSeoContractRule as SEOContractRule,
+  NodeSeoEntity as SEOEntity,
+  NodeSeoExpectation as SEOExpectation,
+  NodeSeoIssue as SEOIssue,
+  NodeSeoOverrides as SEOOverrides,
+} from "./native";
 
-export interface Robots {
-  index: boolean;
-  follow: boolean;
-  maxSnippet?: number;
-  maxImagePreview?: string;
-  maxVideoPreview?: number;
-}
+import type {
+  NodeBreadcrumb,
+  NodeCleanResult,
+  NodeContractSite,
+  NodeFaqItem,
+  NodeOpenGraph,
+  NodeSeoConfig,
+  NodeSeoContractRule,
+  NodeSeoEntity,
+  NodeSeoExpectation,
+  NodeSeoIssue,
+  NodeSeoOverrides,
+  NodeTwitter,
+} from "./native";
 
-export interface SEOEntity {
-  entityType: string;
-  title?: string;
-  description?: string;
-  slug?: string;
-  bodyHtml?: string;
-  status?: string;
-  image?: string;
-  imageWidth?: number;
-  imageHeight?: number;
-  imageAlt?: string;
-  publishedAt?: string;
-  updatedAt?: string;
-  authorName?: string;
-  sku?: string;
-  price?: string;
-  priceCurrency?: string;
-  availability?: string;
-  sameAs?: string[];
-  address?: string;
-  breadcrumbs?: Breadcrumb[];
-  faqItems?: FAQItem[];
-}
-
-export interface Breadcrumb {
-  name: string;
-  url: string;
-}
-
-export interface FAQItem {
-  question: string;
-  answer: string;
-}
-
-export interface SEOOverrides {
-  metaTitle?: string;
-  metaDescription?: string;
-  canonicalUrl?: string;
-  robotsIndex?: boolean;
-  robotsFollow?: boolean;
-  robotsMaxSnippet?: number;
-  robotsMaxImagePreview?: string;
-  robotsMaxVideoPreview?: number;
-  ogTitle?: string;
-  ogDescription?: string;
-  ogImageUrl?: string;
-  ogImageWidth?: number;
-  ogImageHeight?: number;
-  ogImageAlt?: string;
-  twitterCard?: string;
-  twitterTitle?: string;
-  twitterDescription?: string;
-  twitterImageUrl?: string;
-  schemaJsonLd?: object | object[];
-  omitSchema?: boolean;
-  skipTitleTemplate?: boolean;
-  twitterCreator?: string;
-  ogAudio?: string;
-  ogVideo?: string;
-}
-
-export interface OpenGraphPayload {
-  type: string;
-  title?: string;
-  description?: string;
-  url?: string;
-  image?: string;
-  imageWidth?: number;
-  imageHeight?: number;
-  imageAlt?: string;
-  siteName?: string;
-  locale?: string;
-  localeAlternate?: string[];
-  audio?: string;
-  video?: string;
-}
-
-export interface TwitterPayload {
-  card: string;
-  title?: string;
-  description?: string;
-  image?: string;
-  imageAlt?: string;
-  site?: string;
-  creator?: string;
-}
-
-/** Canonical snake_case wire format, shared with the Python/Rust APIs. */
-export interface PayloadDict {
-  title: string;
-  description: string;
-  canonical: string;
-  robots: string;
-  og: OpenGraphPayload;
-  twitter: TwitterPayload;
-  schema_jsonld?: object | object[];
-}
-
-export interface SEOPayload {
-  title: string;
-  description: string;
-  canonical: string;
-  robots: string;
-  openGraph: OpenGraphPayload;
-  twitter: TwitterPayload;
-  schemaJsonLd?: object | object[];
-  renderHtml(): string;
-  renderOpengraph(): string;
-  renderTwitter(): string;
-  renderJsonld(): string;
-  /** Plain camelCase object. `JSON.stringify(payload)` serializes this. */
-  toObject(): SEOPayloadData;
-  /** Alias of {@link toObject}; enables correct `JSON.stringify` behavior. */
-  toJSON(): SEOPayloadData;
-  /** Canonical snake_case object (matches the published JSON schema). */
-  toDict(): PayloadDict;
-  /** Canonical pretty-printed JSON string (matches Python `to_json`). */
-  toJSONString(): string;
-  /** Canonical pretty-printed JSON string. */
-  toString(): string;
-  /** Look up a field with a default, dict-style. */
-  get(key: string, fallback?: unknown): unknown;
-  /** Whether a field is present, dict-style. */
-  has(key: string): boolean;
-  /** Deep equality against another payload or a plain object. */
-  equals(other: SEOPayload | SEOPayloadData | Record<string, unknown>): boolean;
-  hash(): string;
-  etag(): string;
-}
-
-/** The enumerable, camelCase data carried by a {@link SEOPayload}. */
-export interface SEOPayloadData {
-  title: string;
-  description: string;
-  canonical: string;
-  robots: string;
-  openGraph: OpenGraphPayload;
-  twitter: TwitterPayload;
-  schemaJsonLd?: object | object[];
-}
-
-/** Canonical snake_case wire format for a contract. */
-export interface ContractDict {
-  contract_version: string;
-  generator: { name: string; version: string };
-  site: { canonical_host: string; scheme: string };
-  defaults: SEOExpectation;
-  rules: SEOContractRule[];
-  exceptions: Record<string, SEOExpectation>;
-}
-
-export interface SEOContractData {
-  contractVersion: string;
-  generator: { name: string; version: string };
-  site: { canonicalHost: string; scheme: string };
-  defaults: SEOExpectation;
-  rules: SEOContractRule[];
-  exceptions: Record<string, SEOExpectation>;
-}
-
-export interface SEOContract {
-  contractVersion: string;
-  generatorName: string;
-  generatorVersion: string;
-  site: { canonicalHost: string; scheme: string };
-  defaults: SEOExpectation;
-  rules: SEOContractRule[];
-  exceptions: Record<string, SEOExpectation>;
-  hash(): string;
-  /** Plain camelCase object. `JSON.stringify(contract)` serializes this. */
-  toObject(): SEOContractData;
-  /** Alias of {@link toObject}; enables correct `JSON.stringify` behavior. */
-  toJSON(): SEOContractData;
-  /** Canonical snake_case object. */
-  toDict(): ContractDict;
-  /** Canonical JSON string. */
-  toJSONString(): string;
-  /** Canonical JSON string. */
-  toString(): string;
-}
-
-export interface SEOContractConfig {
-  canonicalHost: string;
-  scheme?: string;
-  defaults?: SEOExpectation;
-  rules?: SEOContractRule[];
-  exceptions?: Record<string, SEOExpectation>;
-}
-
-export interface SEOContractRule {
-  match: string;
-  expect: SEOExpectation;
-  severity?: "error" | "warning" | "info";
-}
-
-export interface SEOExpectation {
-  required?: boolean;
-  forbidden?: boolean;
-  equals?: string;
-  notEquals?: string;
-  contains?: string;
-  matches?: string;
-  oneOf?: string[];
-  minLength?: number;
-  maxLength?: number;
-  minItems?: number;
-  maxItems?: number;
-  indexable?: boolean;
-  canonical?: string;
-  schemaRequired?: boolean;
-  schemaTypes?: string[];
-  ogRequired?: boolean;
-  twitterRequired?: boolean;
-  sitemapRequired?: boolean;
-  hreflangRequired?: boolean;
-  title?: SEOExpectation;
-  description?: SEOExpectation;
-}
-
-export type ContractSeverity = "error" | "warning" | "info";
-
-export interface SEOIssue {
-  ruleId: string;
-  severity: string;
-  message: string;
-  url?: string;
-  details: Record<string, unknown>;
-}
-
-export declare function buildSeoPayload(
-  entity: SEOEntity,
-  route: string,
-  config: SEOConfig,
-  overrides?: SEOOverrides
-): SEOPayload;
-
-export declare function buildSeoPayloadWithOverrides(
-  entity: SEOEntity,
-  route: string,
-  config: SEOConfig,
-  overrides: SEOOverrides
-): SEOPayload;
-
-export declare function buildSeoContract(
-  config: SEOContractConfig
-): SEOContract;
-
-export declare function validatePayload(
-  payload: SEOPayload
-): SEOIssue[];
-
-export declare function normalizePath(
-  path: string,
-  options?: {
-    enforceHttps?: boolean;
-    lowercasePaths?: boolean;
-    trailingSlash?: string;
-    collapseDuplicateSlashes?: boolean;
-    stripTrackingParams?: boolean;
-    allowedQueryParams?: string[];
+/** Config-scoped hooks are a JavaScript-only extension of the native config. */
+declare module "./native" {
+  interface NodeSeoConfig {
+    /** Config-scoped hooks, run after the payload is built. */
+    hooks?: HookRegistry;
+    /** Config-scoped custom JSON-LD generators. */
+    schemaRegistry?: SchemaRegistry;
   }
-): string;
+}
 
-export declare function normalizePublicUrl(
-  url: string,
-  config: SEOConfig
-): string;
-
-export declare function cleanUrl(url: string): {
-  url: string;
-  removedParams: Record<string, string>;
-  cleanedParams: Record<string, string>;
-};
-
-export declare function cleanQuery(query: string): string;
-
+/** A custom JSON-LD generator registered on a {@link SchemaRegistry}. */
 export type SchemaGenerator = (
-  entity: SEOEntity,
-  config: SEOConfig,
+  entity: NodeSeoEntity,
+  config: NodeSeoConfig,
   canonical: string,
   title: string,
   description: string | null,
   ogImage: string | null
 ) => object | null | undefined;
 
+/** A hook function registered on a {@link HookRegistry}. */
+export type HookFunc = (
+  payload: Record<string, unknown>,
+  entity: NodeSeoEntity,
+  config: NodeSeoConfig
+) => Record<string, unknown>;
+
 /** Config-scoped registry of custom JSON-LD generators. */
 export declare class SchemaRegistry {
+  /** Register a generator for a schema type. */
   register(schemaType: string, generator: SchemaGenerator): SchemaGenerator;
+  /** Register a generator under its function name. */
   register(generator: SchemaGenerator): SchemaGenerator;
   unregister(schemaType: string): void;
   get(schemaType: string): SchemaGenerator | undefined;
@@ -344,25 +78,105 @@ export declare class SchemaRegistry {
   listTypes(): string[];
 }
 
-export type HookFunc = (
-  payload: Record<string, unknown>,
-  entity: SEOEntity,
-  config: SEOConfig
-) => Record<string, unknown>;
-
 /** Config-scoped hook registry. */
 export declare class HookRegistry {
+  /** Register a function for a hook point. */
   register(name: string, fn: HookFunc): HookFunc;
+  /** Decorator form: `hooks.hook("post_process")(fn)`. */
   hook(name: string): (fn: HookFunc) => HookFunc;
   unregister(name: string, fn: HookFunc): void;
   run(
     name: string,
     payload: Record<string, unknown>,
-    entity: SEOEntity,
-    config: SEOConfig
+    entity: NodeSeoEntity,
+    config: NodeSeoConfig
   ): Record<string, unknown>;
   clear(name?: string): void;
   size(): number;
+}
+
+/** The resolved, deterministic SEO payload returned by the wrappers. */
+export interface SEOPayload {
+  /** Resolved title. */
+  title: string;
+  /** Resolved description. */
+  description: string;
+  /** Normalized canonical URL. */
+  canonical: string;
+  /** Serialized robots directives, for example `"index,follow"`. */
+  robots: string;
+  /** Open Graph metadata. */
+  openGraph: NodeOpenGraph;
+  /** Twitter Card metadata. */
+  twitter: NodeTwitter;
+  /** Generated JSON-LD, when schema generation is enabled. */
+  schemaJsonLd?: unknown;
+  /** Fields added by config-scoped hooks. */
+  [key: string]: unknown;
+  /** Renders the full head snippet. */
+  renderHtml(): string;
+  /** Renders only the Open Graph meta tags. */
+  renderOpengraph(): string;
+  /** Renders only the Twitter Card meta tags. */
+  renderTwitter(): string;
+  /** Renders only the JSON-LD script tag. */
+  renderJsonld(): string;
+  /** Returns the payload as a plain camelCase object. */
+  toObject(): Record<string, unknown>;
+  /** Alias of `toObject()` for JSON serialization. */
+  toJSON(): Record<string, unknown>;
+  /** Returns the canonical snake_case wire format. */
+  toDict(): Record<string, unknown>;
+  /** Returns the canonical wire format as a JSON string. */
+  toJSONString(): string;
+  /** Returns the canonical wire format as a JSON string. */
+  toString(): string;
+  /** Returns the SHA-256 hash of the payload. */
+  hash(): string;
+  /** Returns the payload hash as a quoted HTTP ETag. */
+  etag(): string;
+  /** Looks up a camelCase field with a default. */
+  get(key: string, fallback?: unknown): unknown;
+  /** Whether a camelCase field is present. */
+  has(key: string): boolean;
+  /** Deep equality against another payload or a plain object. */
+  equals(other: SEOPayload | Record<string, unknown>): boolean;
+}
+
+/** A generated, machine-readable SEO contract. */
+export interface SEOContract {
+  contractVersion: string;
+  generatorName: string;
+  generatorVersion: string;
+  site: NodeContractSite;
+  defaults: NodeSeoExpectation;
+  rules: NodeSeoContractRule[];
+  exceptions: Record<string, NodeSeoExpectation>;
+  hash(): string;
+  toObject(): Record<string, unknown>;
+  toJSON(): Record<string, unknown>;
+  toDict(): Record<string, unknown>;
+  toJSONString(): string;
+  toString(): string;
+}
+
+/** Input configuration for {@link buildSeoContract}. */
+export interface SEOContractConfig {
+  canonicalHost: string;
+  scheme?: string;
+  defaults?: NodeSeoExpectation;
+  rules?: NodeSeoContractRule[];
+  exceptions?: Record<string, NodeSeoExpectation>;
+}
+
+/** Options accepted by {@link normalizePath}. */
+export interface NormalizePathOptions {
+  enforceHttps?: boolean;
+  lowercasePaths?: boolean;
+  trailingSlash?: "always" | "never" | "preserve";
+  collapseDuplicateSlashes?: boolean;
+  stripTrackingParams?: boolean;
+  allowedQueryParams?: string[];
 }
 
 /** Rust-backed type-name introspection registry. */
@@ -372,19 +186,62 @@ export interface RustSchemaRegistry {
   listTypes(): string[];
 }
 
+/**
+ * Builds an SEO payload for an entity at a route.
+ *
+ * @param entity - Content entity.
+ * @param route - Route path, for example `"/blog/hello"`.
+ * @param config - Site-wide configuration.
+ * @param overrides - Optional per-call overrides.
+ * @returns The resolved SEO payload.
+ */
+export declare function buildSeoPayload(
+  entity: NodeSeoEntity,
+  route: string,
+  config: NodeSeoConfig,
+  overrides?: NodeSeoOverrides
+): SEOPayload;
+
+/** Builds a payload with explicit overrides. */
+export declare function buildSeoPayloadWithOverrides(
+  entity: NodeSeoEntity,
+  route: string,
+  config: NodeSeoConfig,
+  overrides: NodeSeoOverrides
+): SEOPayload;
+
+/** Builds a machine-readable SEO contract. */
+export declare function buildSeoContract(config: SEOContractConfig): SEOContract;
+
+/** Runs the built-in validation checks against a payload. */
+export declare function validatePayload(payload: SEOPayload): NodeSeoIssue[];
+
+/** Normalizes a route path according to the given options. */
+export declare function normalizePath(path: string, options?: NormalizePathOptions): string;
+
+/** Resolves a path or URL against the configured public base URL. */
+export declare function normalizePublicUrl(url: string, config: NodeSeoConfig): string;
+
+/** Removes tracking parameters from a URL. */
+export declare function cleanUrl(url: string): NodeCleanResult;
+
+/** Removes tracking parameters from a query string. */
+export declare function cleanQuery(query: string): string;
+
+/** Returns the Rust-backed schema registry introspection handle. */
 export declare function getSchemaRegistry(): RustSchemaRegistry;
 
-/** Create a published blog post entity. */
+/** Creates a published blog post entity. */
 export declare function fromBlogPost(input: {
   title: string;
   bodyHtml: string;
   slug?: string;
   author?: string;
   excerpt?: string;
-  breadcrumbs?: Breadcrumb[];
-}): SEOEntity;
+  breadcrumbs?: NodeBreadcrumb[];
+}): NodeSeoEntity;
 
-/** Create a published product entity. */
+/** Creates a published product entity. */
 export declare function fromProduct(input: {
   name: string;
   sku: string;
@@ -392,22 +249,28 @@ export declare function fromProduct(input: {
   currency?: string;
   availability?: string;
   description?: string;
-  breadcrumbs?: Breadcrumb[];
-}): SEOEntity;
+  breadcrumbs?: NodeBreadcrumb[];
+}): NodeSeoEntity;
 
-/** Create a published FAQ page entity. */
+/** Creates a published FAQ page entity. */
 export declare function fromFaq(input: {
-  questions: FAQItem[];
+  questions: NodeFaqItem[];
   title?: string;
   description?: string;
-  breadcrumbs?: Breadcrumb[];
-}): SEOEntity;
+  breadcrumbs?: NodeBreadcrumb[];
+}): NodeSeoEntity;
 
+/** Base class for all easeo errors. */
 export declare class EaseoError extends Error {
   code: string;
 }
+/** A URL is malformed or a URL policy is invalid. */
 export declare class InvalidUrlError extends EaseoError {}
+/** A config value failed validation. */
 export declare class ConfigurationError extends EaseoError {}
+/** An entity or overrides value failed validation. */
 export declare class EntityError extends EaseoError {}
+/** JSON-LD construction failed. */
 export declare class SchemaError extends EaseoError {}
+/** Contract generation failed. */
 export declare class ContractError extends EaseoError {}

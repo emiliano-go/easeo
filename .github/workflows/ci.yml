@@ -21,7 +21,7 @@ jobs:
         # rust-version in Cargo.toml.
         rust: [stable, "1.88"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.rust }}
@@ -39,9 +39,9 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install Rust
@@ -65,9 +65,9 @@ jobs:
         # @napi-rs/cli 3.x requires Node 20 or newer.
         node-version: [20, 22]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Set up Node ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
       - name: Install Rust
@@ -76,6 +76,10 @@ jobs:
         run: npm install -g @napi-rs/cli@^3
       - name: Build native module
         run: cd packages/core && napi build --platform --release --manifest-path ../../crates/easeo-node/Cargo.toml && cp ../../crates/easeo-node/*.node .
+      - name: Install TypeScript
+        run: npm install -g typescript
+      - name: Type-check the declarations
+        run: tsc --noEmit --strict --lib es2022,dom --module esnext --moduleResolution bundler tests/javascript/types-consumer.ts
       - name: Run Node tests
         # bash expands the glob on every runner; pwsh on Windows does not,
         # and `node --test <dir>` is not supported on Node 20/22.
@@ -87,12 +91,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test-rust, test-python, test-node]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "20"
       - name: Install dependencies
@@ -109,7 +113,7 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
@@ -117,3 +121,19 @@ jobs:
         run: cargo fmt --all -- --check
       - name: Clippy
         run: cargo clippy --workspace -- -D warnings
+
+  stub-check:
+    name: Python Stub Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install maturin
+        run: pip install "maturin>=1.15,<2.0"
+      - name: Regenerate and verify Python stubs
+        run: |
+          bash scripts/generate_stubs.sh
+          git diff --exit-code -- python/easeo/_easeo_native.pyi

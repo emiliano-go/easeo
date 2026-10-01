@@ -27,7 +27,19 @@ def from_blog_post(
     excerpt: str | None = None,
     breadcrumbs: list[dict[str, str]] | None = None,
 ) -> SEOEntity:
-    """Create a published blog post entity."""
+    """Creates a published blog post entity.
+
+    Args:
+        title: Post title.
+        body_html: Post content as HTML.
+        slug: URL slug.
+        author: Author display name. Omitted when empty.
+        excerpt: Short description. Derived from ``body_html`` when omitted.
+        breadcrumbs: Breadcrumb dicts with ``name`` and ``url`` keys.
+
+    Returns:
+        A ``post`` entity with ``status="published"``.
+    """
     return SEOEntity(
         entity_type="post",
         title=title,
@@ -49,7 +61,20 @@ def from_product(
     description: str | None = None,
     breadcrumbs: list[dict[str, str]] | None = None,
 ) -> SEOEntity:
-    """Create a published product entity."""
+    """Creates a published product entity.
+
+    Args:
+        name: Product title.
+        sku: Stock keeping unit.
+        price: Price, converted to a string.
+        currency: ISO currency code.
+        availability: Availability value, for example ``"InStock"``.
+        description: Short description.
+        breadcrumbs: Breadcrumb dicts with ``name`` and ``url`` keys.
+
+    Returns:
+        A ``product`` entity with ``status="published"``.
+    """
     return SEOEntity(
         entity_type="product",
         title=name,
@@ -69,7 +94,17 @@ def from_faq(
     description: str | None = None,
     breadcrumbs: list[dict[str, str]] | None = None,
 ) -> SEOEntity:
-    """Create a published FAQ page entity from question/answer dicts."""
+    """Creates a published FAQ page entity from question and answer dicts.
+
+    Args:
+        questions: Dicts with ``question`` and ``answer`` keys.
+        title: Page title.
+        description: Short description.
+        breadcrumbs: Breadcrumb dicts with ``name`` and ``url`` keys.
+
+    Returns:
+        A ``faq`` entity with ``status="published"``.
+    """
     return SEOEntity(
         entity_type="faq",
         title=title,

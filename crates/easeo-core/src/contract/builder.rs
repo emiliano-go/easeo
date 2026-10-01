@@ -1,6 +1,11 @@
 use super::model::{ContractGenerator, ContractSite, SEOContract, SEOContractConfig};
 use crate::error::EaseoError;
 
+/// Builds a contract from the given configuration.
+///
+/// # Errors
+///
+/// Returns [`EaseoError`] when contract generation fails.
 pub fn build_contract(config: &SEOContractConfig) -> Result<SEOContract, EaseoError> {
     Ok(SEOContract {
         contract_version: "1".to_string(),

@@ -7,61 +7,91 @@ use crate::twitter::default_twitter_card;
 use crate::url::normalize_public_url;
 use serde::{Deserialize, Serialize};
 
+/// Open Graph metadata for a payload.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OGPayload {
+    /// Open Graph object type, for example `"article"` or `"website"`.
     #[serde(rename = "type")]
     pub og_type: String,
+    /// Open Graph title.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
+    /// Open Graph description.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    /// Open Graph canonical URL.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
+    /// Absolute URL of the Open Graph image.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub image: Option<String>,
+    /// Open Graph image width in pixels.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub image_width: Option<u32>,
+    /// Open Graph image height in pixels.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub image_height: Option<u32>,
+    /// Open Graph image alternative text.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub image_alt: Option<String>,
+    /// Site name, rendered as `og:site_name`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub site_name: Option<String>,
+    /// Locale, for example `"en_US"`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub locale: Option<String>,
+    /// Alternate locales.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub locale_alternate: Option<Vec<String>>,
+    /// Open Graph audio URL.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub audio: Option<String>,
+    /// Open Graph video URL.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub video: Option<String>,
 }
 
+/// Twitter Card metadata for a payload.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TwitterPayload {
+    /// Card type, for example `"summary_large_image"`.
     pub card: String,
+    /// Twitter title.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
+    /// Twitter description.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    /// Absolute URL of the Twitter image.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub image: Option<String>,
+    /// Twitter image alternative text.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub image_alt: Option<String>,
+    /// Twitter `@handle` for the site.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub site: Option<String>,
+    /// Twitter `@handle` of the content creator.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub creator: Option<String>,
 }
 
+/// The resolved, deterministic SEO payload.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SEOPayload {
+    /// Resolved title, with the config title template applied.
     pub title: String,
+    /// Resolved description.
     pub description: String,
+    /// Normalized canonical URL.
     pub canonical: String,
+    /// Serialized robots directives, for example `"index,follow"`.
     pub robots: String,
+    /// Open Graph metadata.
     pub og: OGPayload,
+    /// Twitter Card metadata.
     pub twitter: TwitterPayload,
+    /// Generated JSON-LD, when schema generation is enabled.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub schema_jsonld: Option<serde_json::Value>,
     /// Additional fields added by config-scoped hooks. A `BTreeMap` keeps
@@ -76,6 +106,11 @@ pub struct SEOPayload {
 }
 
 impl SEOPayload {
+    /// Converts the payload into a JSON value.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::EaseoError::SerializationError`] when serialization fails.
     pub fn to_dict(&self) -> Result<serde_json::Value, crate::error::EaseoError> {
         serde_json::to_value(self)
             .map_err(|e| crate::error::EaseoError::SerializationError(e.to_string()))
@@ -84,21 +119,37 @@ impl SEOPayload {
     /// Rebuild a payload from its wire format. Unknown top-level keys are
     /// preserved in `extra`. Used by config-scoped hooks, which receive the
     /// payload as a dict and may add arbitrary keys.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::EaseoError::SerializationError`] when the value does not
+    /// match the payload shape.
     pub fn from_dict(value: &serde_json::Value) -> Result<Self, crate::error::EaseoError> {
         serde_json::from_value(value.clone())
             .map_err(|e| crate::error::EaseoError::SerializationError(e.to_string()))
     }
 
+    /// Serializes the payload to a compact JSON string.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::EaseoError::SerializationError`] when serialization fails.
     pub fn to_json(&self) -> Result<String, crate::error::EaseoError> {
         serde_json::to_string(self)
             .map_err(|e| crate::error::EaseoError::SerializationError(e.to_string()))
     }
 
+    /// Serializes the payload to a pretty printed JSON string.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::EaseoError::SerializationError`] when serialization fails.
     pub fn to_json_pretty(&self) -> Result<String, crate::error::EaseoError> {
         serde_json::to_string_pretty(self)
             .map_err(|e| crate::error::EaseoError::SerializationError(e.to_string()))
     }
 
+    /// Renders only the Open Graph meta tags.
     pub fn render_opengraph(&self) -> String {
         let mut lines = Vec::new();
         lines.push(format!(
@@ -182,6 +233,7 @@ impl SEOPayload {
         lines.join("\n")
     }
 
+    /// Renders only the Twitter Card meta tags.
     pub fn render_twitter(&self) -> String {
         let mut lines = Vec::new();
         lines.push(format!(
@@ -227,6 +279,12 @@ impl SEOPayload {
         lines.join("\n")
     }
 
+    /// Renders the JSON-LD script tag, escaping `<` so the JSON stays
+    /// script-safe. Returns an empty string when no schema is present.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::EaseoError::SerializationError`] when serialization fails.
     pub fn render_jsonld(&self) -> Result<String, crate::error::EaseoError> {
         match self.schema_jsonld {
             Some(ref schema) => {
@@ -242,6 +300,13 @@ impl SEOPayload {
         }
     }
 
+    /// Renders the full `<head>` snippet: title, description, canonical,
+    /// robots, Open Graph, Twitter Cards, and JSON-LD.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::EaseoError::SerializationError`] when JSON-LD
+    /// serialization fails.
     pub fn render_html(&self) -> Result<String, crate::error::EaseoError> {
         let mut lines = Vec::new();
         lines.push(format!("<title>{}</title>", escape_html(&self.title)));
@@ -325,6 +390,16 @@ fn entity_default_robots(entity: &SEOEntity, config: &SEOConfig) -> crate::entit
     config.default_robots.clone()
 }
 
+/// Builds a payload from an entity, route, config, optional overrides, and an
+/// optional custom schema registry.
+///
+/// Most callers use the crate level [`crate::build_seo_payload`] or
+/// [`crate::build_seo_payload_with_overrides`] instead.
+///
+/// # Errors
+///
+/// Returns [`EaseoError`] when the entity, route, configuration, or schema is
+/// invalid.
 pub fn build_seo_payload(
     entity: &SEOEntity,
     route: &str,

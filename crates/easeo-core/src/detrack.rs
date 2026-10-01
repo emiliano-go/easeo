@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+/// Tracking query parameters removed by default.
 pub const DEFAULT_PATTERNS: &[&str] = &[
     // UTM parameters
     "utm_source",
@@ -73,12 +74,17 @@ pub const DEFAULT_PATTERNS: &[&str] = &[
     "twclid_extra",
 ];
 
+/// Result of cleaning a URL's tracking parameters.
 pub struct CleanResult {
+    /// URL with tracking parameters removed.
     pub url: String,
+    /// Parameters that were removed, keyed by parameter name.
     pub removed_params: BTreeMap<String, String>,
+    /// Parameters that were kept, keyed by parameter name.
     pub cleaned_params: BTreeMap<String, String>,
 }
 
+/// Removes tracking parameters from a URL and reports what changed.
 pub fn clean_url(url: &str) -> CleanResult {
     let (base, query) = match url.split_once('?') {
         Some((b, q)) => (b.to_string(), q.to_string()),
@@ -113,6 +119,7 @@ pub fn clean_url(url: &str) -> CleanResult {
     }
 }
 
+/// Removes tracking parameters from a query string.
 pub fn clean_query(query: &str) -> String {
     if query.is_empty() {
         return String::new();
@@ -139,6 +146,7 @@ pub(crate) fn is_tracking_param(key: &str) -> bool {
     DEFAULT_PATTERNS.iter().any(|&p| p == lower)
 }
 
+/// Returns the default tracking parameter patterns.
 pub fn default_patterns() -> &'static [&'static str] {
     DEFAULT_PATTERNS
 }

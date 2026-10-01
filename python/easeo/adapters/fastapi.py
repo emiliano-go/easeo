@@ -9,9 +9,34 @@ if TYPE_CHECKING:
 
 
 class EaseoSEO:
-    """FastAPI SEO helper."""
+    """FastAPI SEO helper.
+
+    Usage::
+
+        from fastapi import FastAPI
+        from easeo import SEOConfig
+        from easeo.adapters.fastapi import EaseoSEO
+
+        app = FastAPI()
+        easeo = EaseoSEO(SEOConfig(
+            canonical_host="example.com",
+            public_base_url="https://example.com",
+        ))
+
+        @app.get("/blog/{slug}")
+        def post(slug: str):
+            return easeo.for_entity(Post(...), f"/blog/{slug}")
+    """
 
     def __init__(self, config: SEOConfig) -> None:
+        """Creates the helper with a site-wide configuration.
+
+        Args:
+            config: Site-wide configuration.
+
+        Raises:
+            ValueError: If ``config`` is ``None``.
+        """
         if config is None:
             raise ValueError(
                 "SEOConfig is required. Pass a valid SEOConfig instance."
@@ -19,7 +44,16 @@ class EaseoSEO:
         self.config = config
 
     def for_entity(self, entity: Any, route: str) -> dict:
-        """Build SEO payload for a given entity and route."""
+        """Builds the SEO payload for an entity at a route.
+
+        Args:
+            entity: Object exposing ``entity_type``, ``title``, and
+                ``excerpt`` or ``description`` attributes.
+            route: Route path, for example ``"/blog/hello"``.
+
+        Returns:
+            The payload as a plain dictionary.
+        """
         from easeo import build_seo_payload
         from easeo.adapters._common import build_entity
 

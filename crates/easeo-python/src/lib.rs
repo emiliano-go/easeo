@@ -129,17 +129,25 @@ fn convert_core_error(e: core::EaseoError) -> PyErr {
 
 // ── Python wrapper for SEOAuthor ─────────────────────────────────────
 
+/// An author reference used in article schemas.
 #[pyclass(from_py_object)]
 #[derive(Clone)]
 struct SEOAuthor {
+    /// Display name of the author.
     #[pyo3(get)]
     name: String,
+    /// Optional profile URL for the author.
     #[pyo3(get)]
     url: Option<String>,
 }
 
 #[pymethods]
 impl SEOAuthor {
+    /// Creates an author reference.
+    ///
+    /// Args:
+    ///     name: Display name of the author.
+    ///     url: Optional profile URL.
     #[new]
     #[pyo3(signature = (name, *, url=None))]
     fn new(name: String, url: Option<String>) -> Self {
@@ -149,39 +157,54 @@ impl SEOAuthor {
 
 // ── Python wrapper for OGPayload ─────────────────────────────────────
 
+/// Open Graph metadata for a payload. Read-only.
 #[pyclass(from_py_object)]
 #[derive(Clone)]
 struct OGPayload {
+    /// Open Graph object type, for example ``"article"`` or ``"website"``.
     #[pyo3(get)]
     r#type: String,
+    /// Open Graph title.
     #[pyo3(get)]
     title: Option<String>,
+    /// Open Graph description.
     #[pyo3(get)]
     description: Option<String>,
+    /// Open Graph canonical URL.
     #[pyo3(get)]
     url: Option<String>,
+    /// Absolute URL of the Open Graph image.
     #[pyo3(get)]
     image: Option<String>,
+    /// Open Graph image width in pixels.
     #[pyo3(get)]
     image_width: Option<u32>,
+    /// Open Graph image height in pixels.
     #[pyo3(get)]
     image_height: Option<u32>,
+    /// Open Graph image alternative text.
     #[pyo3(get)]
     image_alt: Option<String>,
+    /// Site name.
     #[pyo3(get)]
     site_name: Option<String>,
+    /// Locale, for example ``"en_US"``.
     #[pyo3(get)]
     locale: Option<String>,
+    /// Alternate locales.
     #[pyo3(get)]
     locale_alternate: Option<Vec<String>>,
+    /// Open Graph audio URL.
     #[pyo3(get)]
     audio: Option<String>,
+    /// Open Graph video URL.
     #[pyo3(get)]
     video: Option<String>,
 }
 
 #[pymethods]
 impl OGPayload {
+    /// Returns the Open Graph metadata as a dictionary.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let dict = PyDict::new(py);
         dict.set_item("type", &self.r#type)?;
@@ -247,27 +270,36 @@ impl From<&core::OGPayload> for OGPayload {
 
 // ── Python wrapper for TwitterPayload ────────────────────────────────
 
+/// Twitter Card metadata for a payload. Read-only.
 #[pyclass(from_py_object)]
 #[derive(Clone)]
 struct TwitterPayload {
+    /// Card type, for example ``"summary_large_image"``.
     #[pyo3(get)]
     card: String,
+    /// Twitter title.
     #[pyo3(get)]
     title: Option<String>,
+    /// Twitter description.
     #[pyo3(get)]
     description: Option<String>,
+    /// Absolute URL of the Twitter image.
     #[pyo3(get)]
     image: Option<String>,
+    /// Twitter image alternative text.
     #[pyo3(get)]
     image_alt: Option<String>,
+    /// Twitter ``@handle`` for the site.
     #[pyo3(get)]
     site: Option<String>,
+    /// Twitter ``@handle`` of the content creator.
     #[pyo3(get)]
     creator: Option<String>,
 }
 
 #[pymethods]
 impl TwitterPayload {
+    /// Returns the Twitter Card metadata as a dictionary.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let dict = PyDict::new(py);
         dict.set_item("card", &self.card)?;
@@ -309,6 +341,7 @@ impl From<&core::TwitterPayload> for TwitterPayload {
 
 // ── Python wrapper for SEOExpectation ────────────────────────────────
 
+/// Expectations applied to a page, a rule match, or contract defaults.
 #[pyclass(from_py_object)]
 #[derive(Clone)]
 struct SEOExpectation {
@@ -317,6 +350,31 @@ struct SEOExpectation {
 
 #[pymethods]
 impl SEOExpectation {
+    /// Creates an expectation. Every argument is optional; unset fields are
+    /// not checked.
+    ///
+    /// Args:
+    ///     required: The field must be present.
+    ///     forbidden: The field must be absent.
+    ///     equals: The field must equal this value.
+    ///     not_equals: The field must not equal this value.
+    ///     contains: The field must contain this substring.
+    ///     matches: The field must match this regular expression.
+    ///     one_of: The field must be one of these values.
+    ///     min_length: Minimum string length.
+    ///     max_length: Maximum string length.
+    ///     min_items: Minimum number of items.
+    ///     max_items: Maximum number of items.
+    ///     indexable: Whether the page must be indexable.
+    ///     canonical: Expected canonical behavior, for example ``"self"``.
+    ///     schema_required: Whether a JSON-LD schema must be present.
+    ///     schema_types: Required schema.org types.
+    ///     og_required: Whether Open Graph metadata must be present.
+    ///     twitter_required: Whether Twitter Card metadata must be present.
+    ///     sitemap_required: Whether a sitemap entry must be present.
+    ///     hreflang_required: Whether hreflang annotations must be present.
+    ///     title: Nested expectations for the title.
+    ///     description: Nested expectations for the description.
     #[new]
     #[pyo3(signature = (*, required=None, forbidden=None, equals=None, not_equals=None, contains=None, matches=None, one_of=None, min_length=None, max_length=None, min_items=None, max_items=None, indexable=None, canonical=None, schema_required=None, schema_types=None, og_required=None, twitter_required=None, sitemap_required=None, hreflang_required=None, title=None, description=None))]
     fn new(
@@ -384,16 +442,19 @@ impl SEOExpectation {
         }
     }
 
+    /// Whether the field is required.
     #[getter]
     fn required(&self) -> Option<bool> {
         self.inner.required
     }
 
+    /// Whether the page must be indexable.
     #[getter]
     fn indexable(&self) -> Option<bool> {
         self.inner.indexable
     }
 
+    /// Expected canonical behavior.
     #[getter]
     fn canonical(&self) -> Option<&str> {
         self.inner.canonical.as_deref()
@@ -402,19 +463,30 @@ impl SEOExpectation {
 
 // ── Python wrapper for SEOContractRule ────────────────────────────────
 
+/// A contract rule matched against route paths.
 #[pyclass(from_py_object)]
 #[derive(Clone)]
 struct SEOContractRule {
+    /// Route pattern, for example ``"/blog/*"``.
     #[pyo3(get)]
     r#match: String,
+    /// Expectations applied when the pattern matches.
     #[pyo3(get)]
     expect: SEOExpectation,
+    /// Optional severity for failures of this rule.
     #[pyo3(get)]
     severity: Option<String>,
 }
 
 #[pymethods]
 impl SEOContractRule {
+    /// Creates a contract rule.
+    ///
+    /// Args:
+    ///     match: Route pattern, for example ``"/blog/*"``.
+    ///     expect: Expectations applied when the pattern matches.
+    ///     severity: Optional severity, one of ``"error"``, ``"warning"``,
+    ///         or ``"info"``.
     #[new]
     #[pyo3(signature = (r#match, expect, *, severity=None))]
     fn new(r#match: String, expect: SEOExpectation, severity: Option<String>) -> Self {
@@ -444,6 +516,11 @@ impl From<&core::SEOContractRule> for SEOContractRule {
 
 // ── Python wrapper for SchemaRegistry ────────────────────────────────
 
+/// Native introspection handle for the Rust schema registry.
+///
+/// Python callables are registered through ``easeo.registry.SchemaRegistry``,
+/// which stores them and applies the generated schema around the build. This
+/// native type only exposes ``has`` and ``list_types``.
 #[pyclass(skip_from_py_object)]
 struct SchemaRegistry {
     inner: std::sync::Mutex<core::registry::SchemaRegistry>,
@@ -451,6 +528,7 @@ struct SchemaRegistry {
 
 #[pymethods]
 impl SchemaRegistry {
+    /// Creates an empty native registry.
     #[new]
     fn new() -> Self {
         Self {
@@ -462,11 +540,13 @@ impl SchemaRegistry {
     // `easeo.registry.SchemaRegistry`, which stores callables and applies
     // them around the build. This native type is introspection only.
 
+    /// Returns whether a native builder is registered for ``schema_type``.
     fn has(&self, schema_type: &str) -> bool {
         let registry = self.inner.lock().unwrap_or_else(|e| e.into_inner());
         registry.has(schema_type)
     }
 
+    /// Lists the schema types with a registered native builder.
     fn list_types(&self) -> Vec<String> {
         let registry = self.inner.lock().unwrap_or_else(|e| e.into_inner());
         registry.list_types()
@@ -475,21 +555,33 @@ impl SchemaRegistry {
 
 // ── Python wrapper for SEOImage ───────────────────────────────────────
 
+/// An image reference used for Open Graph, Twitter Cards, and schemas.
 #[pyclass(from_py_object)]
 #[derive(Clone)]
 struct SEOImage {
+    /// Absolute URL of the image.
     #[pyo3(get)]
     url: String,
+    /// Image width in pixels.
     #[pyo3(get)]
     width: Option<u32>,
+    /// Image height in pixels.
     #[pyo3(get)]
     height: Option<u32>,
+    /// Alternative text describing the image.
     #[pyo3(get)]
     alt: Option<String>,
 }
 
 #[pymethods]
 impl SEOImage {
+    /// Creates an image reference.
+    ///
+    /// Args:
+    ///     url: Absolute URL of the image.
+    ///     width: Image width in pixels.
+    ///     height: Image height in pixels.
+    ///     alt: Alternative text.
     #[new]
     #[pyo3(signature = (url, *, width=None, height=None, alt=None))]
     fn new(url: String, width: Option<u32>, height: Option<u32>, alt: Option<String>) -> Self {
@@ -501,6 +593,7 @@ impl SEOImage {
         }
     }
 
+    /// Returns the image as a dictionary.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let dict = PyDict::new(py);
         dict.set_item("url", &self.url)?;
@@ -541,17 +634,25 @@ impl From<&SEOImage> for core::SEOImage {
 
 // ── Python wrapper for Breadcrumb ─────────────────────────────────────
 
+/// A single entry in a breadcrumb trail.
 #[pyclass(from_py_object)]
 #[derive(Clone)]
 struct Breadcrumb {
+    /// Human readable label for the breadcrumb.
     #[pyo3(get)]
     name: String,
+    /// URL the breadcrumb links to.
     #[pyo3(get)]
     url: String,
 }
 
 #[pymethods]
 impl Breadcrumb {
+    /// Creates a breadcrumb entry.
+    ///
+    /// Args:
+    ///     name: Breadcrumb label.
+    ///     url: Breadcrumb URL.
     #[new]
     fn new(name: String, url: String) -> Self {
         Self { name, url }
@@ -578,17 +679,25 @@ impl From<&Breadcrumb> for core::Breadcrumb {
 
 // ── Python wrapper for FAQItem ────────────────────────────────────────
 
+/// A single question and answer pair for FAQ schemas.
 #[pyclass(from_py_object)]
 #[derive(Clone)]
 struct FAQItem {
+    /// The question text.
     #[pyo3(get)]
     question: String,
+    /// The answer text.
     #[pyo3(get)]
     answer: String,
 }
 
 #[pymethods]
 impl FAQItem {
+    /// Creates a question and answer pair.
+    ///
+    /// Args:
+    ///     question: Question text.
+    ///     answer: Answer text.
     #[new]
     fn new(question: String, answer: String) -> Self {
         Self { question, answer }
@@ -615,23 +724,37 @@ impl From<&FAQItem> for core::FAQItem {
 
 // ── Python wrapper for Robots ─────────────────────────────────────────
 
+/// Robots directives for a page.
 #[pyclass(from_py_object)]
 #[derive(Clone)]
 struct Robots {
+    /// Whether search engines may index the page. Defaults to ``True``.
     #[pyo3(get)]
     index: bool,
+    /// Whether search engines may follow links. Defaults to ``True``.
     #[pyo3(get)]
     follow: bool,
+    /// Maximum number of characters to show in a snippet.
     #[pyo3(get)]
     max_snippet: Option<i32>,
+    /// Maximum image preview size, for example ``"large"``.
     #[pyo3(get)]
     max_image_preview: Option<String>,
+    /// Maximum video preview length in seconds.
     #[pyo3(get)]
     max_video_preview: Option<i32>,
 }
 
 #[pymethods]
 impl Robots {
+    /// Creates robots directives. All arguments are keyword-only.
+    ///
+    /// Args:
+    ///     index: Whether search engines may index the page.
+    ///     follow: Whether search engines may follow links.
+    ///     max_snippet: Maximum snippet length.
+    ///     max_image_preview: Maximum image preview size.
+    ///     max_video_preview: Maximum video preview length in seconds.
     #[new]
     #[pyo3(signature = (*, index=true, follow=true, max_snippet=None, max_image_preview=None, max_video_preview=None))]
     fn new(
@@ -650,6 +773,8 @@ impl Robots {
         }
     }
 
+    /// Serializes the directives into the meta robots string, for example
+    /// ``"index,follow"``.
     fn serialize(&self) -> String {
         let mut parts = vec![
             if self.index { "index" } else { "noindex" }.to_string(),
@@ -694,25 +819,41 @@ impl From<&Robots> for core::Robots {
 
 // ── Python wrapper for URLPolicy ──────────────────────────────────────
 
+/// Controls how canonical URLs are normalized.
 #[pyclass(from_py_object)]
 #[derive(Clone)]
 struct URLPolicy {
+    /// Whether ``http`` is rewritten to ``https``.
     #[pyo3(get)]
     enforce_https: bool,
+    /// Whether path segments are lowercased.
     #[pyo3(get)]
     lowercase_paths: bool,
+    /// Trailing slash policy: ``"always"``, ``"never"``, or ``"preserve"``.
     #[pyo3(get)]
     trailing_slash: String,
+    /// Whether repeated slashes are collapsed.
     #[pyo3(get)]
     collapse_duplicate_slashes: bool,
+    /// Whether tracking parameters such as ``utm_*`` are removed.
     #[pyo3(get)]
     strip_tracking_params: bool,
+    /// Query parameters to keep when tracking parameters are stripped.
     #[pyo3(get)]
     allowed_query_params: Vec<String>,
 }
 
 #[pymethods]
 impl URLPolicy {
+    /// Creates a URL policy. All arguments are keyword-only.
+    ///
+    /// Args:
+    ///     enforce_https: Rewrite ``http`` to ``https``.
+    ///     lowercase_paths: Lowercase path segments.
+    ///     trailing_slash: ``"always"``, ``"never"``, or ``"preserve"``.
+    ///     collapse_duplicate_slashes: Collapse repeated slashes.
+    ///     strip_tracking_params: Remove tracking parameters.
+    ///     allowed_query_params: Query parameters to keep.
     #[new]
     #[pyo3(signature = (*, enforce_https=true, lowercase_paths=true, trailing_slash="never", collapse_duplicate_slashes=true, strip_tracking_params=true, allowed_query_params=None))]
     fn new(
@@ -779,6 +920,7 @@ impl TryFrom<&URLPolicy> for core::URLPolicy {
 
 // ── Python wrapper for SEOConfig ──────────────────────────────────────
 
+/// Site-wide configuration for payload generation.
 #[pyclass(from_py_object)]
 struct SEOConfig {
     inner: core::SEOConfig,
@@ -803,6 +945,34 @@ impl Clone for SEOConfig {
 
 #[pymethods]
 impl SEOConfig {
+    /// Creates a site-wide configuration.
+    ///
+    /// Args:
+    ///     canonical_host: Canonical hostname without a scheme, for example
+    ///         ``"example.com"``.
+    ///     public_base_url: Full base URL for path resolution, for example
+    ///         ``"https://example.com"``.
+    ///     url_policy: URL normalization policy.
+    ///     default_robots: Robots directives for regular pages.
+    ///     default_og_image: Fallback Open Graph image.
+    ///     site_name: Site name for ``og:site_name`` and title templates.
+    ///     title_template: Title template containing ``{title}``.
+    ///     search_robots: Robots directives for search pages.
+    ///     auto_generate_schema: Generate JSON-LD from the entity type.
+    ///     publisher_name: Organization or publisher name.
+    ///     publisher_logo: Publisher logo URL.
+    ///     locale: Open Graph locale, for example ``"en_US"``.
+    ///     locale_alternate: Alternate locales.
+    ///     twitter_site: Twitter ``@handle`` for ``twitter:site``.
+    ///     emit_warnings: Emit Python warnings for validation issues.
+    ///     schema_type_map: Entity type to schema.org type overrides.
+    ///     search_url_template: Search URL template for the homepage
+    ///         ``WebSite`` ``SearchAction``.
+    ///     hooks: Config-scoped ``HookRegistry``.
+    ///     schema_registry: Config-scoped ``SchemaRegistry``.
+    ///
+    /// Raises:
+    ///     ConfigurationError: If a configuration value is invalid.
     #[new]
     #[pyo3(signature = (canonical_host, public_base_url, *, url_policy=None, default_robots=None, default_og_image=None, site_name=None, title_template=None, search_robots=None, auto_generate_schema=true, publisher_name=None, publisher_logo=None, locale=None, locale_alternate=None, twitter_site=None, emit_warnings=false, schema_type_map=None, search_url_template=None, hooks=None, schema_registry=None))]
     fn new(
@@ -870,26 +1040,31 @@ impl SEOConfig {
         })
     }
 
+    /// Config-scoped hook registry, consulted after the payload is built.
     #[getter]
     fn hooks(&self, py: Python<'_>) -> Option<PyObject> {
         self.hooks.as_ref().map(|h| h.clone_ref(py))
     }
 
+    /// Sets the config-scoped hook registry.
     #[setter]
     fn set_hooks(&mut self, hooks: Option<PyObject>) {
         self.hooks = hooks;
     }
 
+    /// Config-scoped schema registry with Python-callable generators.
     #[getter]
     fn schema_registry(&self, py: Python<'_>) -> Option<PyObject> {
         self.schema_registry.as_ref().map(|r| r.clone_ref(py))
     }
 
+    /// Sets the config-scoped schema registry.
     #[setter]
     fn set_schema_registry(&mut self, registry: Option<PyObject>) {
         self.schema_registry = registry;
     }
 
+    /// Returns the configuration as a dictionary.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let json_str = serde_json::to_string(&self.inner)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
@@ -901,6 +1076,7 @@ impl SEOConfig {
 
 // ── Python wrapper for SEOEntity ──────────────────────────────────────
 
+/// A content entity to generate SEO metadata for.
 #[pyclass(from_py_object)]
 #[derive(Clone)]
 struct SEOEntity {
@@ -909,6 +1085,33 @@ struct SEOEntity {
 
 #[pymethods]
 impl SEOEntity {
+    /// Creates a content entity.
+    ///
+    /// Args:
+    ///     entity_type: One of ``home``, ``post``, ``page``, ``video``,
+    ///         ``taxonomy``, ``search``, ``product``, ``organization``,
+    ///         ``local_business``, ``faq``, or ``other``.
+    ///     slug: URL slug.
+    ///     title: Page title.
+    ///     excerpt: Short description.
+    ///     body_html: Full content as HTML.
+    ///     status: Publication status. Anything other than ``publish``
+    ///         becomes noindex.
+    ///     featured_image: Primary image.
+    ///     published_at: ISO date or datetime.
+    ///     updated_at: ISO date or datetime.
+    ///     author_name: Author display name.
+    ///     breadcrumbs: Breadcrumb trail.
+    ///     sku: Product SKU.
+    ///     price: Product price.
+    ///     price_currency: ISO currency code.
+    ///     availability: Product availability.
+    ///     same_as: Additional URLs for organization schemas.
+    ///     address: Postal address for local business schemas.
+    ///     faq_items: Question and answer pairs for FAQ schemas.
+    ///
+    /// Raises:
+    ///     EntityError: If ``entity_type`` is not a supported value.
     #[new]
     #[pyo3(signature = (entity_type, *, slug=None, title=None, excerpt=None, body_html=None, status=None, featured_image=None, published_at=None, updated_at=None, author_name=None, breadcrumbs=None, sku=None, price=None, price_currency=None, availability=None, same_as=None, address=None, faq_items=None))]
     fn new(
@@ -960,21 +1163,25 @@ impl SEOEntity {
         })
     }
 
+    /// The entity type as a string.
     #[getter]
     fn entity_type(&self) -> &str {
         self.inner.entity_type.as_str()
     }
 
+    /// The page title.
     #[getter]
     fn title(&self) -> Option<&str> {
         self.inner.title.as_deref()
     }
 
+    /// The short description.
     #[getter]
     fn excerpt(&self) -> Option<&str> {
         self.inner.excerpt.as_deref()
     }
 
+    /// Returns the entity as a dictionary.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let json_str = serde_json::to_string(&self.inner)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
@@ -986,6 +1193,7 @@ impl SEOEntity {
 
 // ── Python wrapper for SEOOverrides ───────────────────────────────────
 
+/// Per-call overrides that take precedence over the entity and config.
 #[pyclass(from_py_object)]
 #[derive(Clone, Default)]
 struct SEOOverrides {
@@ -994,6 +1202,27 @@ struct SEOOverrides {
 
 #[pymethods]
 impl SEOOverrides {
+    /// Creates per-call overrides. All arguments are keyword-only and
+    /// optional.
+    ///
+    /// Args:
+    ///     meta_title: Overrides the resolved title.
+    ///     meta_description: Overrides the resolved description.
+    ///     canonical_url: Overrides the resolved canonical URL.
+    ///     robots: Overrides the robots directives.
+    ///     og_title: Overrides the Open Graph title.
+    ///     og_description: Overrides the Open Graph description.
+    ///     og_image: Overrides the Open Graph image.
+    ///     twitter_card: Overrides the Twitter Card type.
+    ///     twitter_title: Overrides the Twitter title.
+    ///     twitter_description: Overrides the Twitter description.
+    ///     twitter_image: Overrides the Twitter image.
+    ///     schema_jsonld: Replaces the generated JSON-LD schema.
+    ///     omit_schema: When ``True``, no JSON-LD is emitted.
+    ///     skip_title_template: When ``True``, the title template is skipped.
+    ///     twitter_creator: Overrides the Twitter creator handle.
+    ///     og_audio: Open Graph audio URL.
+    ///     og_video: Open Graph video URL.
     #[new]
     #[pyo3(signature = (*, meta_title=None, meta_description=None, canonical_url=None, robots=None, og_title=None, og_description=None, og_image=None, twitter_card=None, twitter_title=None, twitter_description=None, twitter_image=None, schema_jsonld=None, omit_schema=false, skip_title_template=false, twitter_creator=None, og_audio=None, og_video=None))]
     fn new<'py>(
@@ -1057,6 +1286,11 @@ impl SEOOverrides {
 
 // ── Python wrapper for SEOPayload ─────────────────────────────────────
 
+/// The resolved, deterministic SEO payload.
+///
+/// Dict-compatible: supports ``payload["title"]``, ``payload.get(...)``,
+/// ``len(payload)``, iteration, and equality against another payload or a
+/// plain dictionary.
 #[pyclass(from_py_object)]
 #[derive(Clone)]
 struct SEOPayload {
@@ -1076,6 +1310,7 @@ impl SEOPayload {
         }
     }
 
+    /// Returns the value for ``key``, or ``default`` when absent.
     #[pyo3(signature = (key, default=None))]
     fn get<'py>(
         &self,
@@ -1090,22 +1325,26 @@ impl SEOPayload {
         }
     }
 
+    /// Returns the payload keys.
     fn keys<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyList>> {
         let dict = self.to_dict(py)?;
         let keys: Vec<PyObject> = dict.keys().into_iter().map(|k| k.into()).collect();
         PyList::new(py, keys)
     }
 
+    /// Returns whether ``key`` is present.
     fn __contains__<'py>(&self, py: Python<'py>, key: &str) -> PyResult<bool> {
         let dict = self.to_dict(py)?;
         Ok(dict.get_item(key)?.is_some())
     }
 
+    /// Iterates over the payload keys.
     fn __iter__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         let keys = self.keys(py)?;
         keys.call_method0("__iter__")
     }
 
+    /// Returns the number of top-level payload fields.
     fn __len__<'py>(&self, py: Python<'py>) -> PyResult<usize> {
         Ok(self.to_dict(py)?.len())
     }
@@ -1124,36 +1363,43 @@ impl SEOPayload {
         Ok(false)
     }
 
+    /// The resolved title.
     #[getter]
     fn title(&self) -> &str {
         &self.inner.title
     }
 
+    /// The resolved description.
     #[getter]
     fn description(&self) -> &str {
         &self.inner.description
     }
 
+    /// The normalized canonical URL.
     #[getter]
     fn canonical(&self) -> &str {
         &self.inner.canonical
     }
 
+    /// The serialized robots directives.
     #[getter]
     fn robots(&self) -> &str {
         &self.inner.robots
     }
 
+    /// The Open Graph metadata.
     #[getter]
     fn og(&self) -> OGPayload {
         (&self.inner.og).into()
     }
 
+    /// The Twitter Card metadata.
     #[getter]
     fn twitter(&self) -> TwitterPayload {
         (&self.inner.twitter).into()
     }
 
+    /// The generated JSON-LD schema, as a dict or list.
     #[getter]
     fn schema_jsonld<'py>(&self, py: Python<'py>) -> Option<PyObject> {
         self.inner
@@ -1162,26 +1408,32 @@ impl SEOPayload {
             .and_then(|v| json_to_pyobject(py, v).ok().map(|o| o.into()))
     }
 
+    /// Renders the full head snippet: title, description, canonical, robots,
+    /// Open Graph, Twitter Cards, and JSON-LD.
     fn render_html(&self) -> PyResult<String> {
         self.inner
             .render_html()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))
     }
 
+    /// Renders only the Open Graph meta tags.
     fn render_opengraph(&self) -> String {
         self.inner.render_opengraph()
     }
 
+    /// Renders only the Twitter Card meta tags.
     fn render_twitter(&self) -> String {
         self.inner.render_twitter()
     }
 
+    /// Renders only the JSON-LD script tag.
     fn render_jsonld(&self) -> PyResult<String> {
         self.inner
             .render_jsonld()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))
     }
 
+    /// Returns the payload as a dictionary.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let json_val = self
             .inner
@@ -1190,17 +1442,20 @@ impl SEOPayload {
         json_to_pydict(py, &json_val)
     }
 
+    /// Returns the payload as a pretty printed JSON string.
     fn to_json(&self) -> PyResult<String> {
         self.inner
             .to_json_pretty()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))
     }
 
+    /// Returns the SHA-256 hash of the payload.
     fn hash(&self) -> PyResult<String> {
         core::hash_payload(&self.inner)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))
     }
 
+    /// Returns the payload hash as a quoted HTTP ETag.
     fn etag(&self) -> PyResult<String> {
         core::etag_payload(&self.inner)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))
@@ -1209,6 +1464,7 @@ impl SEOPayload {
 
 // ── Python wrapper for SEOContract ────────────────────────────────────
 
+/// A generated, machine-readable SEO contract.
 #[pyclass(from_py_object)]
 #[derive(Clone)]
 struct SEOContract {
@@ -1217,11 +1473,13 @@ struct SEOContract {
 
 #[pymethods]
 impl SEOContract {
+    /// Version of the contract format itself.
     #[getter]
     fn contract_version(&self) -> &str {
         &self.inner.contract_version
     }
 
+    /// Site identity stored in the contract.
     #[getter]
     fn site<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let json_val = serde_json::to_value(&self.inner.site)
@@ -1229,12 +1487,14 @@ impl SEOContract {
         json_to_pydict(py, &json_val)
     }
 
+    /// Returns the contract as pretty printed JSON.
     fn to_json(&self) -> PyResult<String> {
         self.inner
             .to_json()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))
     }
 
+    /// Returns the contract as a dictionary.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let json_str = serde_json::to_string(&self.inner)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
@@ -1243,12 +1503,14 @@ impl SEOContract {
         json_to_pydict(py, &json_val)
     }
 
+    /// Returns the SHA-256 hash of the serialized contract.
     fn hash(&self) -> PyResult<String> {
         self.inner
             .hash()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))
     }
 
+    /// Writes the contract as JSON to the given path.
     fn write(&self, path: &str) -> PyResult<()> {
         self.inner
             .write(path)
@@ -1258,6 +1520,7 @@ impl SEOContract {
 
 // ── Python wrapper for SEOContractConfig ──────────────────────────────
 
+/// Input configuration for building a contract.
 #[pyclass(from_py_object)]
 #[derive(Clone)]
 struct SEOContractConfig {
@@ -1266,6 +1529,14 @@ struct SEOContractConfig {
 
 #[pymethods]
 impl SEOContractConfig {
+    /// Creates a contract configuration.
+    ///
+    /// Args:
+    ///     canonical_host: Canonical hostname without a scheme.
+    ///     scheme: URL scheme, defaults to ``"https"``.
+    ///     defaults: Default expectations applied to every route.
+    ///     rules: Route specific rules.
+    ///     exceptions: Per-route expectation overrides.
     #[new]
     #[pyo3(signature = (canonical_host, *, scheme="https", defaults=None, rules=None, exceptions=None))]
     fn new(
@@ -1309,14 +1580,19 @@ impl SEOContractConfig {
 
 // ── Python wrapper for SEOIssue ───────────────────────────────────────
 
+/// A single validation finding.
 #[pyclass(skip_from_py_object)]
 struct SEOIssue {
+    /// Stable rule identifier, for example ``"EASEO101"``.
     #[pyo3(get)]
     rule_id: String,
+    /// Severity, one of ``"error"``, ``"warning"``, or ``"info"``.
     #[pyo3(get)]
     severity: String,
+    /// Human readable description of the finding.
     #[pyo3(get)]
     message: String,
+    /// Canonical URL the finding applies to.
     #[pyo3(get)]
     url: Option<String>,
     details_json: String,
@@ -1324,6 +1600,7 @@ struct SEOIssue {
 
 #[pymethods]
 impl SEOIssue {
+    /// Additional structured details about the finding.
     #[getter]
     fn details(&self, py: Python) -> PyResult<PyObject> {
         let val: JsonValue = serde_json::from_str(&self.details_json)
@@ -1541,6 +1818,19 @@ fn maybe_emit_warnings(
     Ok(())
 }
 
+/// Builds a deterministic SEO payload for an entity at a route.
+///
+/// Args:
+///     entity: Content entity.
+///     route: Route path, for example ``"/blog/hello"``.
+///     config: Site-wide configuration.
+///     overrides: Optional per-call overrides.
+///
+/// Returns:
+///     The resolved payload.
+///
+/// Raises:
+///     EaseoError: If the entity, route, or configuration is invalid.
 #[pyfunction]
 #[pyo3(signature = (entity, route, config, overrides=None))]
 fn build_seo_payload(
@@ -1560,6 +1850,13 @@ fn build_seo_payload(
     Ok(SEOPayload { inner: payload })
 }
 
+/// Builds a deterministic SEO payload with explicit overrides.
+///
+/// Prefer :func:`build_seo_payload`; this variant requires ``overrides``.
+///
+/// Raises:
+///     EaseoError: If the entity, route, overrides, or configuration is
+///         invalid.
 #[pyfunction]
 fn build_seo_payload_with_overrides(
     py: Python<'_>,
@@ -1581,6 +1878,10 @@ fn build_seo_payload_with_overrides(
     Ok(SEOPayload { inner: payload })
 }
 
+/// Builds a payload and returns it as a plain dictionary.
+///
+/// Raises:
+///     EaseoError: If the entity, route, or configuration is invalid.
 #[pyfunction]
 #[pyo3(signature = (entity, route, config, overrides=None))]
 fn build_seo_payload_dict<'py>(
@@ -1594,12 +1895,20 @@ fn build_seo_payload_dict<'py>(
     payload.to_dict(py)
 }
 
+/// Builds a machine-readable SEO contract.
+///
+/// Raises:
+///     ContractError: If contract generation fails.
 #[pyfunction]
 fn build_seo_contract(config: &SEOContractConfig) -> PyResult<SEOContract> {
     let contract = core::build_seo_contract(&config.inner).map_err(convert_core_error)?;
     Ok(SEOContract { inner: contract })
 }
 
+/// Runs the built-in validation checks against a payload.
+///
+/// Returns:
+///     A list of :class:`SEOIssue` findings, empty when the payload passes.
 #[pyfunction]
 fn validate_payload(payload: &SEOPayload) -> Vec<SEOIssue> {
     core::validate_payload(&payload.inner)
@@ -1608,6 +1917,10 @@ fn validate_payload(payload: &SEOPayload) -> Vec<SEOIssue> {
         .collect()
 }
 
+/// Normalizes a route path according to the URL policy.
+///
+/// Raises:
+///     ValueError: If the path or policy is invalid.
 #[pyfunction]
 fn normalize_path_fn(path: &str, policy: &URLPolicy) -> PyResult<String> {
     let up: core::URLPolicy = policy.try_into()?;
@@ -1615,12 +1928,20 @@ fn normalize_path_fn(path: &str, policy: &URLPolicy) -> PyResult<String> {
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))
 }
 
+/// Resolves a path or URL against the configured public base URL.
+///
+/// Raises:
+///     EaseoError: If the input or configuration is invalid.
 #[pyfunction]
 fn normalize_public_url_fn(url: &str, config: &SEOConfig) -> PyResult<String> {
     core::url::normalize_public_url(url, &config.inner)
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))
 }
 
+/// Removes tracking parameters from a URL.
+///
+/// Returns:
+///     A dict with ``url``, ``removed_params``, and ``cleaned_params``.
 #[pyfunction]
 fn clean_url_fn<'py>(py: Python<'py>, url: &str) -> PyResult<Bound<'py, PyDict>> {
     let result = core::detrack::clean_url(url);
@@ -1639,6 +1960,7 @@ fn clean_url_fn<'py>(py: Python<'py>, url: &str) -> PyResult<Bound<'py, PyDict>>
     Ok(dict)
 }
 
+/// Removes tracking parameters from a query string.
 #[pyfunction]
 fn clean_query_fn(query: &str) -> String {
     core::detrack::clean_query(query)
@@ -1646,46 +1968,35 @@ fn clean_query_fn(query: &str) -> String {
 
 // ── Module definition ─────────────────────────────────────────────────
 
+/// Python bindings for the easeo Rust core.
 #[pymodule]
-fn _easeo_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    // Exceptions (built dynamically so they inherit from ValueError too)
-    let types = exception_types(m.py())?;
-    m.add("EaseoError", types.easeo.clone_ref(m.py()))?;
-    m.add("InvalidUrlError", types.invalid_url.clone_ref(m.py()))?;
-    m.add("ConfigurationError", types.configuration.clone_ref(m.py()))?;
-    m.add("EntityError", types.entity.clone_ref(m.py()))?;
-    m.add("SchemaError", types.schema.clone_ref(m.py()))?;
-    m.add("ContractError", types.contract.clone_ref(m.py()))?;
+mod _easeo_native {
+    use super::*;
 
-    // Types
-    m.add_class::<SEOImage>()?;
-    m.add_class::<SEOAuthor>()?;
-    m.add_class::<OGPayload>()?;
-    m.add_class::<TwitterPayload>()?;
-    m.add_class::<Breadcrumb>()?;
-    m.add_class::<FAQItem>()?;
-    m.add_class::<Robots>()?;
-    m.add_class::<URLPolicy>()?;
-    m.add_class::<SEOConfig>()?;
-    m.add_class::<SEOEntity>()?;
-    m.add_class::<SEOOverrides>()?;
-    m.add_class::<SEOPayload>()?;
-    m.add_class::<SEOContract>()?;
-    m.add_class::<SEOContractConfig>()?;
-    m.add_class::<SEOContractRule>()?;
-    m.add_class::<SEOExpectation>()?;
-    m.add_class::<SEOIssue>()?;
-    m.add_class::<SchemaRegistry>()?;
+    #[pymodule_export]
+    use super::{
+        Breadcrumb, FAQItem, OGPayload, Robots, SEOAuthor, SEOConfig, SEOContract,
+        SEOContractConfig, SEOContractRule, SEOEntity, SEOExpectation, SEOImage, SEOIssue,
+        SEOOverrides, SEOPayload, SchemaRegistry, TwitterPayload, URLPolicy,
+    };
 
-    // Functions
-    m.add_function(wrap_pyfunction!(build_seo_payload, m)?)?;
-    m.add_function(wrap_pyfunction!(build_seo_payload_with_overrides, m)?)?;
-    m.add_function(wrap_pyfunction!(build_seo_payload_dict, m)?)?;
-    m.add_function(wrap_pyfunction!(build_seo_contract, m)?)?;
-    m.add_function(wrap_pyfunction!(validate_payload, m)?)?;
-    m.add_function(wrap_pyfunction!(normalize_path_fn, m)?)?;
-    m.add_function(wrap_pyfunction!(normalize_public_url_fn, m)?)?;
-    m.add_function(wrap_pyfunction!(clean_url_fn, m)?)?;
-    m.add_function(wrap_pyfunction!(clean_query_fn, m)?)?;
-    Ok(())
+    #[pymodule_export]
+    use super::{
+        build_seo_contract, build_seo_payload, build_seo_payload_dict,
+        build_seo_payload_with_overrides, clean_query_fn, clean_url_fn, normalize_path_fn,
+        normalize_public_url_fn, validate_payload,
+    };
+
+    #[pymodule_init]
+    fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
+        // Exceptions (built dynamically so they inherit from ValueError too)
+        let types = exception_types(m.py())?;
+        m.add("EaseoError", types.easeo.clone_ref(m.py()))?;
+        m.add("InvalidUrlError", types.invalid_url.clone_ref(m.py()))?;
+        m.add("ConfigurationError", types.configuration.clone_ref(m.py()))?;
+        m.add("EntityError", types.entity.clone_ref(m.py()))?;
+        m.add("SchemaError", types.schema.clone_ref(m.py()))?;
+        m.add("ContractError", types.contract.clone_ref(m.py()))?;
+        Ok(())
+    }
 }

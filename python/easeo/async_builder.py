@@ -31,7 +31,12 @@ def _get_executor(max_workers: int = 4) -> ThreadPoolExecutor:
 
 
 def set_executor(executor: ThreadPoolExecutor | None) -> None:
-    """Override the default thread pool executor (``None`` resets it)."""
+    """Overrides the default thread pool executor.
+
+    Args:
+        executor: Executor to use. Pass ``None`` to reset to the default
+            lazy-initialized executor.
+    """
     global _default_executor
     _default_executor = executor
 
@@ -43,7 +48,21 @@ async def build_seo_payload_async(
     overrides: "SEOOverrides | None" = None,
     executor: ThreadPoolExecutor | None = None,
 ) -> "SEOPayload":
-    """Async version of :func:`easeo.build_seo_payload`."""
+    """Async version of :func:`easeo.build_seo_payload`.
+
+    The synchronous build runs in a thread pool. The Rust core releases the
+    GIL, so this genuinely moves work off the event loop.
+
+    Args:
+        entity: Content entity.
+        route: Route path, for example ``"/blog/hello"``.
+        config: Site-wide configuration.
+        overrides: Optional per-call overrides.
+        executor: Executor to run in. Defaults to the shared executor.
+
+    Returns:
+        The built payload.
+    """
     loop = asyncio.get_running_loop()
     ex = executor if executor is not None else _get_executor()
     return await loop.run_in_executor(ex, build_seo_payload, entity, route, config, overrides)

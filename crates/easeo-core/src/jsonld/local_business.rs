@@ -1,6 +1,12 @@
 use super::{organization::build_organization, SchemaContext};
 use crate::error::EaseoError;
 
+/// Builds a `LocalBusiness` schema from the entity address and organization
+/// fields.
+///
+/// # Errors
+///
+/// Returns [`EaseoError`] when the schema cannot be constructed.
 pub fn build_local_business(ctx: &SchemaContext) -> Result<serde_json::Value, EaseoError> {
     let mut schema = build_organization(ctx)?;
     schema["@type"] = serde_json::Value::String("LocalBusiness".to_string());

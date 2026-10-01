@@ -1,6 +1,11 @@
 use super::{base_schema, SchemaContext};
 use crate::error::EaseoError;
 
+/// Builds a `Product` schema with an optional offer.
+///
+/// # Errors
+///
+/// Returns [`EaseoError`] when the schema cannot be constructed.
 pub fn build_product(ctx: &SchemaContext) -> Result<serde_json::Value, EaseoError> {
     let mut schema = base_schema("Product", ctx)?;
 

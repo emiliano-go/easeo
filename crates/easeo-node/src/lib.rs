@@ -1,7 +1,8 @@
 #![deny(clippy::all)]
 
 use easeo_core as core;
-use napi::{Env, JsFunction, JsObject};
+use napi::bindgen_prelude::*;
+use napi::JsString;
 use napi_derive::napi;
 
 /// Emit `console.warn` for validation issues when `emitWarnings` is set.
@@ -16,10 +17,10 @@ fn emit_warnings(env: &Env, payload: &core::SEOPayload, config: &core::SEOConfig
     let Ok(global) = env.get_global() else {
         return;
     };
-    let Ok(console) = global.get_named_property::<JsObject>("console") else {
+    let Ok(console) = global.get_named_property::<Object>("console") else {
         return;
     };
-    let Ok(warn) = console.get_named_property::<JsFunction>("warn") else {
+    let Ok(warn) = console.get_named_property::<Function<JsString, Unknown>>("warn") else {
         return;
     };
     for issue in issues {
@@ -30,43 +31,68 @@ fn emit_warnings(env: &Env, payload: &core::SEOPayload, config: &core::SEOConfig
             .unwrap_or_default();
         let message = format!("[{}] {}{}", issue.rule_id, issue.message, location);
         if let Ok(value) = env.create_string(&message) {
-            let _ = warn.call(None, &[value]);
+            let _ = warn.call(value);
         }
     }
 }
 
 // ── Node wrapper for SEOConfig ────────────────────────────────────────
 
+/// Site-wide configuration for payload generation.
 #[napi(object)]
-pub struct NodeSEOConfig {
+pub struct NodeSeoConfig {
+    /// Canonical hostname without a scheme, for example `"example.com"`.
     pub canonical_host: String,
+    /// Full base URL for path resolution, for example `"https://example.com"`.
     pub public_base_url: String,
+    /// Site name for `og:site_name` and title templates.
     pub site_name: Option<String>,
+    /// Title template containing `{title}`.
     pub title_template: Option<String>,
+    /// Fallback Open Graph image URL.
     pub default_og_image: Option<String>,
+    /// Rewrite `http` to `https`. Defaults to `true`.
     pub enforce_https: Option<bool>,
+    /// Lowercase path segments. Defaults to `true`.
     pub lowercase_paths: Option<bool>,
+    /// Trailing slash policy: `"always"`, `"never"`, or `"preserve"`.
     pub trailing_slash: Option<String>,
+    /// Collapse repeated slashes. Defaults to `true`.
     pub collapse_duplicate_slashes: Option<bool>,
+    /// Remove tracking parameters. Defaults to `true`.
     pub strip_tracking_params: Option<bool>,
+    /// Query parameters to keep when tracking parameters are stripped.
     pub allowed_query_params: Option<Vec<String>>,
+    /// Open Graph locale, for example `"en_US"`.
     pub locale: Option<String>,
+    /// Alternate locales.
     pub locale_alternate: Option<Vec<String>>,
+    /// Twitter `@handle` for `twitter:site`.
     pub twitter_site: Option<String>,
+    /// Organization or publisher name used in schemas.
     pub publisher_name: Option<String>,
+    /// Publisher logo URL used in schemas.
     pub publisher_logo: Option<String>,
+    /// Generate JSON-LD from the entity type. Defaults to `true`.
     pub auto_generate_schema: Option<bool>,
+    /// Emit `console.warn` for validation issues. Defaults to `false`.
     pub emit_warnings: Option<bool>,
+    /// Default `index` directive for regular pages. Defaults to `true`.
     pub default_robots_index: Option<bool>,
+    /// Default `follow` directive for regular pages. Defaults to `true`.
     pub default_robots_follow: Option<bool>,
+    /// `index` directive for search pages. Defaults to `false`.
     pub search_robots_index: Option<bool>,
+    /// `follow` directive for search pages. Defaults to `true`.
     pub search_robots_follow: Option<bool>,
+    /// JSON object mapping entity types to schema.org types.
     pub schema_type_map_json: Option<String>,
+    /// Search URL template for the homepage `WebSite` `SearchAction`.
     pub search_url_template: Option<String>,
 }
 
-impl From<&NodeSEOConfig> for core::SEOConfig {
-    fn from(c: &NodeSEOConfig) -> Self {
+impl From<&NodeSeoConfig> for core::SEOConfig {
+    fn from(c: &NodeSeoConfig) -> Self {
         let trailing = match c.trailing_slash.as_deref() {
             Some("always") => core::TrailingSlash::Always,
             Some("preserve") => core::TrailingSlash::Preserve,
@@ -124,46 +150,76 @@ impl From<&NodeSEOConfig> for core::SEOConfig {
 
 // ── Node wrapper for SEOEntity ────────────────────────────────────────
 
+/// A content entity to generate SEO metadata for.
 #[napi(object)]
-pub struct NodeSEOEntity {
+pub struct NodeSeoEntity {
+    /// One of `home`, `post`, `page`, `video`, `taxonomy`, `search`,
+    /// `product`, `organization`, `local_business`, `faq`, or `other`.
     pub entity_type: String,
+    /// Page title.
     pub title: Option<String>,
+    /// Short description. `description` is an alias.
     pub excerpt: Option<String>,
+    /// Alias for `excerpt`.
     pub description: Option<String>,
+    /// URL slug.
     pub slug: Option<String>,
+    /// Full content as HTML, used to derive a snippet when no excerpt is set.
     pub body_html: Option<String>,
+    /// Publication status. Anything other than `publish` becomes noindex.
     pub status: Option<String>,
+    /// Absolute URL of the primary image.
     pub image: Option<String>,
+    /// Primary image width in pixels.
     pub image_width: Option<u32>,
+    /// Primary image height in pixels.
     pub image_height: Option<u32>,
+    /// Primary image alternative text.
     pub image_alt: Option<String>,
+    /// Publication date as an ISO date or datetime.
     pub published_at: Option<String>,
+    /// Last update date as an ISO date or datetime.
     pub updated_at: Option<String>,
+    /// Author display name.
     pub author_name: Option<String>,
+    /// Product stock keeping unit.
     pub sku: Option<String>,
+    /// Product price as a string.
     pub price: Option<String>,
+    /// ISO currency code for the price.
     pub price_currency: Option<String>,
+    /// Product availability, for example `"InStock"`.
     pub availability: Option<String>,
+    /// Additional URLs used as `sameAs` in organization schemas.
     pub same_as: Option<Vec<String>>,
+    /// Postal address for local business schemas.
     pub address: Option<String>,
+    /// Breadcrumb trail.
     pub breadcrumbs: Option<Vec<NodeBreadcrumb>>,
-    pub faq_items: Option<Vec<NodeFAQItem>>,
+    /// Question and answer pairs for FAQ schemas.
+    pub faq_items: Option<Vec<NodeFaqItem>>,
 }
 
+/// A single entry in a breadcrumb trail.
 #[napi(object)]
 pub struct NodeBreadcrumb {
+    /// Human readable label for the breadcrumb.
     pub name: String,
+    /// URL the breadcrumb links to.
     pub url: String,
 }
 
+/// A single question and answer pair for FAQ schemas.
 #[napi(object)]
-pub struct NodeFAQItem {
+pub struct NodeFaqItem {
+    /// The question text.
     pub question: String,
+    /// The answer text.
     pub answer: String,
 }
 
-impl From<&NodeSEOEntity> for core::SEOEntity {
-    fn from(e: &NodeSEOEntity) -> Self {
+impl From<&NodeSeoEntity> for core::SEOEntity {
+    fn from(e: &NodeSeoEntity) -> Self {
         let et = core::EntityType::from_str(&e.entity_type).unwrap_or(core::EntityType::Page);
         let bcs = e.breadcrumbs.as_ref().map(|v| {
             v.iter()
@@ -211,112 +267,190 @@ impl From<&NodeSEOEntity> for core::SEOEntity {
 
 // ── Node output types ─────────────────────────────────────────────────
 
+/// Open Graph metadata for a payload.
 #[napi(object)]
 #[derive(Clone)]
 pub struct NodeOpenGraph {
+    /// Open Graph object type, for example `"article"` or `"website"`.
     #[napi(js_name = "type")]
     pub og_type: String,
+    /// Open Graph title.
     pub title: Option<String>,
+    /// Open Graph description.
     pub description: Option<String>,
+    /// Open Graph canonical URL.
     pub url: Option<String>,
+    /// Absolute URL of the Open Graph image.
     pub image: Option<String>,
+    /// Open Graph image width in pixels.
     pub image_width: Option<u32>,
+    /// Open Graph image height in pixels.
     pub image_height: Option<u32>,
+    /// Open Graph image alternative text.
     pub image_alt: Option<String>,
+    /// Site name.
     pub site_name: Option<String>,
+    /// Locale, for example `"en_US"`.
     pub locale: Option<String>,
+    /// Alternate locales.
     pub locale_alternate: Option<Vec<String>>,
+    /// Open Graph audio URL.
     pub audio: Option<String>,
+    /// Open Graph video URL.
     pub video: Option<String>,
 }
 
+/// Twitter Card metadata for a payload.
 #[napi(object)]
 #[derive(Clone)]
 pub struct NodeTwitter {
+    /// Card type, for example `"summary_large_image"`.
     pub card: String,
+    /// Twitter title.
     pub title: Option<String>,
+    /// Twitter description.
     pub description: Option<String>,
+    /// Absolute URL of the Twitter image.
     pub image: Option<String>,
+    /// Twitter image alternative text.
     pub image_alt: Option<String>,
+    /// Twitter `@handle` for the site.
     pub site: Option<String>,
+    /// Twitter `@handle` of the content creator.
     pub creator: Option<String>,
 }
 
+/// The resolved, deterministic SEO payload.
 #[napi]
 #[derive(Clone)]
-pub struct NodeSEOPayload {
-    pub title: String,
-    pub description: String,
-    pub canonical: String,
-    pub robots: String,
-    pub open_graph: NodeOpenGraph,
-    pub twitter: NodeTwitter,
-    pub schema_json_ld: Option<serde_json::Value>,
-    /// Extra fields added by config-scoped hooks. Kept sorted for
-    /// deterministic serialization.
-    pub extra: std::collections::BTreeMap<String, serde_json::Value>,
+pub struct NodeSeoPayload {
+    title: String,
+    description: String,
+    canonical: String,
+    robots: String,
+    open_graph: NodeOpenGraph,
+    twitter: NodeTwitter,
+    schema_json_ld: Option<serde_json::Value>,
+    extra: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 #[napi]
-impl NodeSEOPayload {
+impl NodeSeoPayload {
+    /// Resolved title.
+    #[napi(getter)]
+    pub fn title(&self) -> String {
+        self.title.clone()
+    }
+
+    /// Resolved description.
+    #[napi(getter)]
+    pub fn description(&self) -> String {
+        self.description.clone()
+    }
+
+    /// Normalized canonical URL.
+    #[napi(getter)]
+    pub fn canonical(&self) -> String {
+        self.canonical.clone()
+    }
+
+    /// Serialized robots directives, for example `"index,follow"`.
+    #[napi(getter)]
+    pub fn robots(&self) -> String {
+        self.robots.clone()
+    }
+
+    /// Open Graph metadata.
+    #[napi(getter, js_name = "openGraph")]
+    pub fn open_graph(&self) -> NodeOpenGraph {
+        self.open_graph.clone()
+    }
+
+    /// Twitter Card metadata.
+    #[napi(getter)]
+    pub fn twitter(&self) -> NodeTwitter {
+        self.twitter.clone()
+    }
+
+    /// Generated JSON-LD, when schema generation is enabled.
+    #[napi(getter, js_name = "schemaJsonLd")]
+    pub fn schema_json_ld(&self) -> Option<serde_json::Value> {
+        self.schema_json_ld.clone()
+    }
+
+    /// Extra fields added by config-scoped hooks.
+    #[napi(getter)]
+    pub fn extra(&self) -> std::collections::BTreeMap<String, serde_json::Value> {
+        self.extra.clone()
+    }
+
+    /// Renders the full head snippet: title, description, canonical, robots,
+    /// Open Graph, Twitter Cards, and JSON-LD.
     #[napi]
-    pub fn render_html(&self) -> Result<String, napi::Error> {
+    pub fn render_html(&self) -> Result<String> {
         let payload = self.to_core();
         payload
             .render_html()
             .map_err(|e| napi::Error::from_reason(e.to_string()))
     }
 
+    /// Renders only the Open Graph meta tags.
     #[napi]
     pub fn render_opengraph(&self) -> String {
         let payload = self.to_core();
         payload.render_opengraph()
     }
 
+    /// Renders only the Twitter Card meta tags.
     #[napi]
     pub fn render_twitter(&self) -> String {
         let payload = self.to_core();
         payload.render_twitter()
     }
 
+    /// Renders only the JSON-LD script tag.
     #[napi]
-    pub fn render_jsonld(&self) -> Result<String, napi::Error> {
+    pub fn render_jsonld(&self) -> Result<String> {
         let payload = self.to_core();
         payload
             .render_jsonld()
             .map_err(|e| napi::Error::from_reason(e.to_string()))
     }
 
+    /// Returns the payload as a pretty printed JSON string.
     #[napi(js_name = "toJSON")]
-    pub fn to_json(&self) -> Result<String, napi::Error> {
+    pub fn to_json(&self) -> Result<String> {
         let payload = self.to_core();
         payload
             .to_json_pretty()
             .map_err(|e| napi::Error::from_reason(e.to_string()))
     }
 
+    /// Returns the payload as a plain object.
     #[napi]
-    pub fn to_object(&self) -> Result<serde_json::Value, napi::Error> {
+    pub fn to_object(&self) -> Result<serde_json::Value> {
         let payload = self.to_core();
         payload
             .to_dict()
             .map_err(|e| napi::Error::from_reason(e.to_string()))
     }
 
+    /// Returns the SHA-256 hash of the payload.
     #[napi]
-    pub fn hash(&self) -> Result<String, napi::Error> {
+    pub fn hash(&self) -> Result<String> {
         let payload = self.to_core();
         core::hash_payload(&payload).map_err(|e| napi::Error::from_reason(e.to_string()))
     }
 
+    /// Returns the payload hash as a quoted HTTP ETag.
     #[napi]
-    pub fn etag(&self) -> Result<String, napi::Error> {
+    pub fn etag(&self) -> Result<String> {
         let payload = self.to_core();
         core::etag_payload(&payload).map_err(|e| napi::Error::from_reason(e.to_string()))
     }
 }
 
-impl NodeSEOPayload {
+impl NodeSeoPayload {
     fn to_core(&self) -> core::SEOPayload {
         let og = core::OGPayload {
             og_type: self.open_graph.og_type.clone(),
@@ -394,13 +528,14 @@ impl NodeSEOPayload {
 
 // ── Main build function ───────────────────────────────────────────────
 
+/// Builds a deterministic SEO payload for an entity at a route.
 #[napi]
 pub fn build_seo_payload(
     env: Env,
-    entity: NodeSEOEntity,
+    entity: NodeSeoEntity,
     route: String,
-    config: NodeSEOConfig,
-) -> Result<NodeSEOPayload, napi::Error> {
+    config: NodeSeoConfig,
+) -> Result<NodeSeoPayload> {
     let core_config: core::SEOConfig = (&config).into();
     core_config
         .validate()
@@ -413,51 +548,76 @@ pub fn build_seo_payload(
         .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     emit_warnings(&env, &payload, &core_config);
-    Ok(NodeSEOPayload::from_core(payload))
+    Ok(NodeSeoPayload::from_core(payload))
 }
 
 /// Rebuild a payload from its wire dict. Used by the JS hook layer, which
 /// post-processes `toObject()` and needs the result to flow back into
 /// `hash()`, `renderHtml()`, `etag()`, etc.
 #[napi]
-pub fn payload_from_dict(dict: serde_json::Value) -> Result<NodeSEOPayload, napi::Error> {
+pub fn payload_from_dict(dict: serde_json::Value) -> Result<NodeSeoPayload> {
     let payload =
         core::SEOPayload::from_dict(&dict).map_err(|e| napi::Error::from_reason(e.to_string()))?;
-    Ok(NodeSEOPayload::from_core(payload))
+    Ok(NodeSeoPayload::from_core(payload))
 }
 
 // ── Node wrapper for SEOOverrides ────────────────────────────────────
 
+/// Per-call overrides that take precedence over the entity and config.
 #[napi(object)]
-pub struct NodeSEOOverrides {
+pub struct NodeSeoOverrides {
+    /// Overrides the resolved title.
     pub meta_title: Option<String>,
+    /// Overrides the resolved description.
     pub meta_description: Option<String>,
+    /// Overrides the resolved canonical URL.
     pub canonical_url: Option<String>,
+    /// Overrides the robots `index` directive.
     pub robots_index: Option<bool>,
+    /// Overrides the robots `follow` directive.
     pub robots_follow: Option<bool>,
+    /// Overrides the robots `max-snippet` directive.
     pub robots_max_snippet: Option<i32>,
+    /// Overrides the robots `max-image-preview` directive.
     pub robots_max_image_preview: Option<String>,
+    /// Overrides the robots `max-video-preview` directive.
     pub robots_max_video_preview: Option<i32>,
+    /// Overrides the Open Graph title.
     pub og_title: Option<String>,
+    /// Overrides the Open Graph description.
     pub og_description: Option<String>,
+    /// Overrides the Open Graph image URL.
     pub og_image_url: Option<String>,
+    /// Open Graph image width in pixels.
     pub og_image_width: Option<u32>,
+    /// Open Graph image height in pixels.
     pub og_image_height: Option<u32>,
+    /// Open Graph image alternative text.
     pub og_image_alt: Option<String>,
+    /// Overrides the Twitter Card type.
     pub twitter_card: Option<String>,
+    /// Overrides the Twitter title.
     pub twitter_title: Option<String>,
+    /// Overrides the Twitter description.
     pub twitter_description: Option<String>,
+    /// Overrides the Twitter image URL.
     pub twitter_image_url: Option<String>,
+    /// Replaces the generated JSON-LD schema.
     pub schema_jsonld: Option<serde_json::Value>,
+    /// When `true`, no JSON-LD is emitted.
     pub omit_schema: Option<bool>,
+    /// When `true`, the config title template is skipped.
     pub skip_title_template: Option<bool>,
+    /// Overrides the Twitter creator handle.
     pub twitter_creator: Option<String>,
+    /// Open Graph audio URL.
     pub og_audio: Option<String>,
+    /// Open Graph video URL.
     pub og_video: Option<String>,
 }
 
-impl From<&NodeSEOOverrides> for core::SEOOverrides {
-    fn from(o: &NodeSEOOverrides) -> Self {
+impl From<&NodeSeoOverrides> for core::SEOOverrides {
+    fn from(o: &NodeSeoOverrides) -> Self {
         let robots = match (o.robots_index, o.robots_follow) {
             (Some(index), Some(follow)) => Some(core::Robots {
                 index,
@@ -518,14 +678,15 @@ impl From<&NodeSEOOverrides> for core::SEOOverrides {
 
 // ── Build with overrides ─────────────────────────────────────────────
 
+/// Builds a deterministic SEO payload with explicit overrides.
 #[napi]
 pub fn build_seo_payload_with_overrides(
     env: Env,
-    entity: NodeSEOEntity,
+    entity: NodeSeoEntity,
     route: String,
-    config: NodeSEOConfig,
-    overrides: NodeSEOOverrides,
-) -> Result<NodeSEOPayload, napi::Error> {
+    config: NodeSeoConfig,
+    overrides: NodeSeoOverrides,
+) -> Result<NodeSeoPayload> {
     let core_config: core::SEOConfig = (&config).into();
     core_config
         .validate()
@@ -540,60 +701,116 @@ pub fn build_seo_payload_with_overrides(
             .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
     emit_warnings(&env, &payload, &core_config);
-    Ok(NodeSEOPayload::from_core(payload))
+    Ok(NodeSeoPayload::from_core(payload))
 }
 
 // ── Contract ──────────────────────────────────────────────────────────
 
+/// Input configuration for building a contract.
 #[napi(object)]
-pub struct NodeSEOContractConfig {
+pub struct NodeSeoContractConfig {
+    /// Canonical hostname without a scheme.
     pub canonical_host: String,
+    /// URL scheme, defaults to `"https"`.
     pub scheme: Option<String>,
-    pub defaults: Option<NodeSEOExpectation>,
-    pub rules: Option<Vec<NodeSEOContractRule>>,
+    /// Default expectations applied to every route.
+    pub defaults: Option<NodeSeoExpectation>,
+    /// Route specific rules.
+    pub rules: Option<Vec<NodeSeoContractRule>>,
+    /// JSON object of per-route expectation overrides.
     pub exceptions_json: Option<String>,
 }
 
+/// A contract rule matched against route paths.
 #[napi(object)]
 #[derive(Clone)]
-pub struct NodeSEOContractRule {
+pub struct NodeSeoContractRule {
+    /// Route pattern, for example `"/blog/*"`.
     pub r#match: String,
-    pub expect: NodeSEOExpectation,
+    /// Expectations applied when the pattern matches.
+    pub expect: NodeSeoExpectation,
+    /// Optional severity: `"error"`, `"warning"`, or `"info"`.
     pub severity: Option<String>,
 }
 
+/// A generated, machine-readable SEO contract.
 #[napi]
 #[derive(Clone)]
-pub struct NodeSEOContract {
-    pub contract_version: String,
-    pub generator_name: String,
-    pub generator_version: String,
-    pub site: NodeContractSite,
-    pub defaults: NodeSEOExpectation,
-    pub rules: Vec<NodeSEOContractRule>,
-    pub exceptions: std::collections::BTreeMap<String, NodeSEOExpectation>,
+pub struct NodeSeoContract {
+    contract_version: String,
+    generator_name: String,
+    generator_version: String,
+    site: NodeContractSite,
+    defaults: NodeSeoExpectation,
+    rules: Vec<NodeSeoContractRule>,
+    exceptions: std::collections::BTreeMap<String, NodeSeoExpectation>,
 }
 
 #[napi]
-impl NodeSEOContract {
+impl NodeSeoContract {
+    /// Version of the contract format itself.
+    #[napi(getter, js_name = "contractVersion")]
+    pub fn contract_version(&self) -> String {
+        self.contract_version.clone()
+    }
+
+    /// Generator name.
+    #[napi(getter, js_name = "generatorName")]
+    pub fn generator_name(&self) -> String {
+        self.generator_name.clone()
+    }
+
+    /// Generator version.
+    #[napi(getter, js_name = "generatorVersion")]
+    pub fn generator_version(&self) -> String {
+        self.generator_version.clone()
+    }
+
+    /// Site identity stored in the contract.
+    #[napi(getter)]
+    pub fn site(&self) -> NodeContractSite {
+        self.site.clone()
+    }
+
+    /// Default expectations applied to every route.
+    #[napi(getter)]
+    pub fn defaults(&self) -> NodeSeoExpectation {
+        self.defaults.clone()
+    }
+
+    /// Route specific rules.
+    #[napi(getter)]
+    pub fn rules(&self) -> Vec<NodeSeoContractRule> {
+        self.rules.clone()
+    }
+
+    /// Per-route expectation overrides.
+    #[napi(getter)]
+    pub fn exceptions(&self) -> std::collections::BTreeMap<String, NodeSeoExpectation> {
+        self.exceptions.clone()
+    }
+
+    /// Returns the SHA-256 hash of the serialized contract.
     #[napi]
-    pub fn hash(&self) -> Result<String, napi::Error> {
+    pub fn hash(&self) -> Result<String> {
         let contract = self.to_core();
         contract
             .hash()
             .map_err(|e| napi::Error::from_reason(e.to_string()))
     }
 
+    /// Returns the contract as pretty printed JSON.
     #[napi(js_name = "toJSON")]
-    pub fn to_json(&self) -> Result<String, napi::Error> {
+    pub fn to_json(&self) -> Result<String> {
         let contract = self.to_core();
         contract
             .to_json()
             .map_err(|e| napi::Error::from_reason(e.to_string()))
     }
 
+    /// Returns the contract as a plain object.
     #[napi]
-    pub fn to_dict(&self) -> Result<serde_json::Value, napi::Error> {
+    pub fn to_dict(&self) -> Result<serde_json::Value> {
         let contract = self.to_core();
         contract
             .to_dict()
@@ -601,7 +818,7 @@ impl NodeSEOContract {
     }
 }
 
-impl NodeSEOContract {
+impl NodeSeoContract {
     fn to_core(&self) -> core::SEOContract {
         core::SEOContract {
             contract_version: self.contract_version.clone(),
@@ -624,15 +841,19 @@ impl NodeSEOContract {
     }
 }
 
+/// Site identity stored in a contract.
 #[napi(object)]
 #[derive(Clone)]
 pub struct NodeContractSite {
+    /// Canonical hostname.
     pub canonical_host: String,
+    /// URL scheme.
     pub scheme: String,
 }
 
+/// Builds a machine-readable SEO contract.
 #[napi]
-pub fn build_seo_contract(config: NodeSEOContractConfig) -> Result<NodeSEOContract, napi::Error> {
+pub fn build_seo_contract(config: NodeSeoContractConfig) -> Result<NodeSeoContract> {
     let defaults = config.defaults.map(|d| d.to_core()).unwrap_or_default();
     let rules = config
         .rules
@@ -655,7 +876,7 @@ pub fn build_seo_contract(config: NodeSEOContractConfig) -> Result<NodeSEOContra
     };
     let contract =
         core::build_seo_contract(&cfg).map_err(|e| napi::Error::from_reason(e.to_string()))?;
-    Ok(NodeSEOContract {
+    Ok(NodeSeoContract {
         contract_version: contract.contract_version,
         generator_name: contract.generator.name,
         generator_version: contract.generator.version,
@@ -663,50 +884,72 @@ pub fn build_seo_contract(config: NodeSEOContractConfig) -> Result<NodeSEOContra
             canonical_host: contract.site.canonical_host,
             scheme: contract.site.scheme,
         },
-        defaults: NodeSEOExpectation::from_core(&contract.defaults),
+        defaults: NodeSeoExpectation::from_core(&contract.defaults),
         rules: contract
             .rules
             .iter()
-            .map(NodeSEOContractRule::from_core)
+            .map(NodeSeoContractRule::from_core)
             .collect(),
         exceptions: contract
             .exceptions
             .iter()
-            .map(|(k, v)| (k.clone(), NodeSEOExpectation::from_core(v)))
+            .map(|(k, v)| (k.clone(), NodeSeoExpectation::from_core(v)))
             .collect(),
     })
 }
 
 // ── Node wrapper for SEOExpectation ────────────────────────────────────
 
+/// Expectations applied to a page, a rule match, or contract defaults.
 #[napi(object)]
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct NodeSEOExpectation {
+pub struct NodeSeoExpectation {
+    /// The field must be present.
     pub required: Option<bool>,
+    /// The field must be absent.
     pub forbidden: Option<bool>,
+    /// The field must equal this value.
     pub equals: Option<String>,
+    /// The field must not equal this value.
     pub not_equals: Option<String>,
+    /// The field must contain this substring.
     pub contains: Option<String>,
+    /// The field must match this regular expression.
     pub matches: Option<String>,
+    /// The field must be one of these values.
     pub one_of: Option<Vec<String>>,
+    /// Minimum string length.
     pub min_length: Option<u32>,
+    /// Maximum string length.
     pub max_length: Option<u32>,
+    /// Minimum number of items.
     pub min_items: Option<u32>,
+    /// Maximum number of items.
     pub max_items: Option<u32>,
+    /// Whether the page must be indexable.
     pub indexable: Option<bool>,
+    /// Expected canonical behavior, for example `"self"`.
     pub canonical: Option<String>,
+    /// Whether a JSON-LD schema must be present.
     pub schema_required: Option<bool>,
+    /// Required schema.org types.
     pub schema_types: Option<Vec<String>>,
+    /// Whether Open Graph metadata must be present.
     pub og_required: Option<bool>,
+    /// Whether Twitter Card metadata must be present.
     pub twitter_required: Option<bool>,
+    /// Whether a sitemap entry must be present.
     pub sitemap_required: Option<bool>,
+    /// Whether hreflang annotations must be present.
     pub hreflang_required: Option<bool>,
+    /// Nested expectations for the title.
     pub title: Option<serde_json::Value>,
+    /// Nested expectations for the description.
     pub description: Option<serde_json::Value>,
 }
 
-impl NodeSEOExpectation {
+impl NodeSeoExpectation {
     fn to_core(&self) -> core::SEOExpectation {
         core::SEOExpectation {
             required: self.required,
@@ -747,12 +990,12 @@ impl NodeSEOExpectation {
                     required: Some(required),
                 }),
             title: self.title.as_ref().and_then(|v| {
-                serde_json::from_value::<NodeSEOExpectation>(v.clone())
+                serde_json::from_value::<NodeSeoExpectation>(v.clone())
                     .ok()
                     .map(|n| Box::new(n.to_core()))
             }),
             description: self.description.as_ref().and_then(|v| {
-                serde_json::from_value::<NodeSEOExpectation>(v.clone())
+                serde_json::from_value::<NodeSeoExpectation>(v.clone())
                     .ok()
                     .map(|n| Box::new(n.to_core()))
             }),
@@ -781,18 +1024,18 @@ impl NodeSEOExpectation {
             sitemap_required: e.sitemap.as_ref().and_then(|s| s.required),
             hreflang_required: e.hreflang.as_ref().and_then(|h| h.required),
             title: e.title.as_ref().map(|t| {
-                let node = NodeSEOExpectation::from_core(t);
+                let node = NodeSeoExpectation::from_core(t);
                 serde_json::to_value(&node).unwrap_or(serde_json::Value::Null)
             }),
             description: e.description.as_ref().map(|d| {
-                let node = NodeSEOExpectation::from_core(d);
+                let node = NodeSeoExpectation::from_core(d);
                 serde_json::to_value(&node).unwrap_or(serde_json::Value::Null)
             }),
         }
     }
 }
 
-impl NodeSEOContractRule {
+impl NodeSeoContractRule {
     fn to_core(&self) -> core::SEOContractRule {
         core::SEOContractRule {
             r#match: self.r#match.clone(),
@@ -809,7 +1052,7 @@ impl NodeSEOContractRule {
     fn from_core(r: &core::SEOContractRule) -> Self {
         Self {
             r#match: r.r#match.clone(),
-            expect: NodeSEOExpectation::from_core(&r.expect),
+            expect: NodeSeoExpectation::from_core(&r.expect),
             severity: match r.severity {
                 Some(core::ContractSeverity::Error) => Some("error".to_string()),
                 Some(core::ContractSeverity::Warning) => Some("warning".to_string()),
@@ -822,21 +1065,28 @@ impl NodeSEOContractRule {
 
 // ── Validation ────────────────────────────────────────────────────────
 
+/// A single validation finding.
 #[napi(object)]
-pub struct NodeSEOIssue {
+pub struct NodeSeoIssue {
+    /// Stable rule identifier, for example `"EASEO101"`.
     pub rule_id: String,
+    /// Severity: `"error"`, `"warning"`, or `"info"`.
     pub severity: String,
+    /// Human readable description of the finding.
     pub message: String,
+    /// Canonical URL the finding applies to.
     pub url: Option<String>,
+    /// Additional structured details about the finding.
     pub details: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
+/// Runs the built-in validation checks against a payload.
 #[napi]
-pub fn validate_payload(payload: &NodeSEOPayload) -> Vec<NodeSEOIssue> {
+pub fn validate_payload(payload: &NodeSeoPayload) -> Vec<NodeSeoIssue> {
     let core_payload = payload.to_core();
     core::validate_payload(&core_payload)
         .iter()
-        .map(|i| NodeSEOIssue {
+        .map(|i| NodeSeoIssue {
             rule_id: i.rule_id.clone(),
             severity: match i.severity {
                 core::validation::Severity::Error => "error".to_string(),
@@ -852,6 +1102,7 @@ pub fn validate_payload(payload: &NodeSEOPayload) -> Vec<NodeSEOIssue> {
 
 // ── URL normalization ─────────────────────────────────────────────────
 
+/// Normalizes a route path according to the given policy fields.
 #[napi]
 pub fn normalize_path(
     path: String,
@@ -861,7 +1112,7 @@ pub fn normalize_path(
     collapse_duplicate_slashes: Option<bool>,
     strip_tracking_params: Option<bool>,
     allowed_query_params: Option<Vec<String>>,
-) -> Result<String, napi::Error> {
+) -> Result<String> {
     let policy = core::URLPolicy {
         enforce_https: enforce_https.unwrap_or(true),
         lowercase_paths: lowercase_paths.unwrap_or(true),
@@ -877,11 +1128,9 @@ pub fn normalize_path(
     core::url::normalize_path(&path, &policy).map_err(|e| napi::Error::from_reason(e.to_string()))
 }
 
+/// Resolves a path or URL against the configured public base URL.
 #[napi]
-pub fn normalize_public_url(
-    url_or_path: String,
-    config: NodeSEOConfig,
-) -> Result<String, napi::Error> {
+pub fn normalize_public_url(url_or_path: String, config: NodeSeoConfig) -> Result<String> {
     let core_config: core::SEOConfig = (&config).into();
     core::url::normalize_public_url(&url_or_path, &core_config)
         .map_err(|e| napi::Error::from_reason(e.to_string()))
@@ -889,13 +1138,18 @@ pub fn normalize_public_url(
 
 // ── detrack ───────────────────────────────────────────────────────────
 
+/// Result of cleaning a URL's tracking parameters.
 #[napi(object)]
 pub struct NodeCleanResult {
+    /// URL with tracking parameters removed.
     pub url: String,
+    /// Parameters that were removed, keyed by parameter name.
     pub removed_params: std::collections::BTreeMap<String, String>,
+    /// Parameters that were kept, keyed by parameter name.
     pub cleaned_params: std::collections::BTreeMap<String, String>,
 }
 
+/// Removes tracking parameters from a URL.
 #[napi]
 pub fn clean_url(url: String) -> NodeCleanResult {
     let result = core::detrack::clean_url(&url);
@@ -906,6 +1160,7 @@ pub fn clean_url(url: String) -> NodeCleanResult {
     }
 }
 
+/// Removes tracking parameters from a query string.
 #[napi]
 pub fn clean_query(query: String) -> String {
     core::detrack::clean_query(&query)
@@ -921,6 +1176,12 @@ struct NodeSchemaRegistryInner {
     types: std::collections::BTreeSet<String>,
 }
 
+/// Native introspection handle for the Rust schema registry.
+///
+/// JavaScript callables are registered through the `SchemaRegistry` class
+/// exported by `@easeo/core`, which stores them and applies the generated
+/// schema around the build. This native type only exposes `has` and
+/// `listTypes`.
 #[napi]
 pub struct NodeSchemaRegistry;
 
@@ -931,6 +1192,7 @@ impl NodeSchemaRegistry {
     // callables and applies them around the build. This native type is
     // introspection only.
 
+    /// Returns whether a native builder is registered for the schema type.
     #[napi]
     pub fn has(&self, schema_type: String) -> bool {
         let guard = GLOBAL_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
@@ -939,6 +1201,7 @@ impl NodeSchemaRegistry {
             .is_some_and(|r| r.types.contains(&schema_type))
     }
 
+    /// Lists the schema types with a registered native builder.
     #[napi]
     pub fn list_types(&self) -> Vec<String> {
         let guard = GLOBAL_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
@@ -948,6 +1211,7 @@ impl NodeSchemaRegistry {
     }
 }
 
+/// Returns the native schema registry introspection handle.
 #[napi]
 pub fn get_schema_registry() -> NodeSchemaRegistry {
     NodeSchemaRegistry

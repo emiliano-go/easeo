@@ -6,25 +6,32 @@ const assert = require("node:assert");
 
 describe("@easeo/core type declarations", () => {
   it("types are defined", () => {
-    // Verify the type declarations exist by checking the index.d.ts content
     const fs = require("fs");
     const path = require("path");
-    const dtsPath = path.join(__dirname, "..", "..", "packages", "core", "index.d.ts");
-    const content = fs.readFileSync(dtsPath, "utf8");
+    const root = path.join(__dirname, "..", "..", "packages", "core");
+    const indexDts = fs.readFileSync(path.join(root, "index.d.ts"), "utf8");
+    const nativeDts = fs.readFileSync(path.join(root, "native.d.ts"), "utf8");
 
-    assert(content.includes("export interface SEOConfig"));
-    assert(content.includes("export interface SEOEntity"));
-    assert(content.includes("export interface SEOPayload"));
-    assert(content.includes("export interface SEOOverrides"));
-    assert(content.includes("export interface SEOContract"));
-    assert(content.includes("export declare class SchemaRegistry"));
-    assert(content.includes("export declare class HookRegistry"));
-    assert(content.includes("buildSeoPayload"));
-    assert(content.includes("buildSeoPayloadWithOverrides"));
-    assert(content.includes("buildSeoContract"));
-    assert(content.includes("validatePayload"));
-    assert(content.includes("fromBlogPost"));
-    assert(content.includes("fromProduct"));
-    assert(content.includes("fromFaq"));
+    // Public aliases and the wrapper surface live in index.d.ts.
+    assert(indexDts.includes("NodeSeoConfig as SEOConfig"));
+    assert(indexDts.includes("NodeSeoEntity as SEOEntity"));
+    assert(indexDts.includes("NodeSeoOverrides as SEOOverrides"));
+    assert(indexDts.includes("export interface SEOPayload"));
+    assert(indexDts.includes("export interface SEOContract"));
+    assert(indexDts.includes("export declare class SchemaRegistry"));
+    assert(indexDts.includes("export declare class HookRegistry"));
+    assert(indexDts.includes("buildSeoPayload"));
+    assert(indexDts.includes("buildSeoPayloadWithOverrides"));
+    assert(indexDts.includes("buildSeoContract"));
+    assert(indexDts.includes("validatePayload"));
+    assert(indexDts.includes("fromBlogPost"));
+    assert(indexDts.includes("fromProduct"));
+    assert(indexDts.includes("fromFaq"));
+
+    // The Rust-generated records live in native.d.ts.
+    assert(nativeDts.includes("export interface NodeSeoConfig"));
+    assert(nativeDts.includes("export interface NodeSeoEntity"));
+    assert(nativeDts.includes("export interface NodeSeoOverrides"));
+    assert(nativeDts.includes("export interface NodeSeoExpectation"));
   });
 });

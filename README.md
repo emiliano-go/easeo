@@ -45,6 +45,8 @@
 
 All logic lives in the Rust core (`easeo-core`). The Python and Node.js packages wrap the same engine, so the same entity, route, and config produce identical output in every language. The cross-language conformance suite asserts that byte for byte.
 
+The [tutorial](https://easeo.emiliano-go.com/tutorial/) walks through installation and a first payload. [Concepts](https://easeo.emiliano-go.com/concepts/) explains the entity model, fallback chains, URL normalization, and validation rules.
+
 ```text
 Content Entity
       |
@@ -64,7 +66,7 @@ Content Entity
 
 ## Quick start
 
-Every binding exposes the same call: pass an entity, a route, and a config, and get a payload back.
+Every binding exposes the same call: pass an entity, a route, and a config, and get a payload back. The full [tutorial](https://easeo.emiliano-go.com/tutorial/) covers configuration, overrides, rendering, and contracts.
 
 ### Python
 
@@ -144,7 +146,9 @@ Given the same inputs, `easeo` always produces the same output. No timestamps, n
 - hash: generate stable ETags
 - cache: safely memoize results
 - diff: detect changes across builds
-- validate in CI: commit your SEO intent as code
+- validate in CI: commit your SEO intent as code with [contracts](https://easeo.emiliano-go.com/guides/contracts-in-ci/)
+
+See [Why easeo](https://easeo.emiliano-go.com/about/why-easeo/) for the design goals and a [comparison](https://easeo.emiliano-go.com/about/comparison/) with other SEO tooling.
 
 ## What easeo is not
 
@@ -156,17 +160,19 @@ Given the same inputs, `easeo` always produces the same output. No timestamps, n
 
 ## Features
 
-- 11 entity types: home, post, page, video, taxonomy, search, product, organization, local_business, faq, other
-- URL normalization: HTTPS enforcement, lowercase paths, trailing slash control, duplicate slash collapse, tracking parameter removal
-- JSON-LD schemas: WebSite, WebPage, Article, Product, Organization, LocalBusiness, FAQPage, BreadcrumbList, plus custom schemas via registry
+- 11 entity types: home, post, page, video, taxonomy, search, product, organization, local_business, faq, other. See the [entity model](https://easeo.emiliano-go.com/concepts/entity-model/)
+- URL normalization: HTTPS enforcement, lowercase paths, trailing slash control, duplicate slash collapse, tracking parameter removal. See [URL normalization](https://easeo.emiliano-go.com/concepts/url-normalization/)
+- JSON-LD schemas: WebSite, WebPage, Article, Product, Organization, LocalBusiness, FAQPage, BreadcrumbList, plus custom schemas via registry. See [JSON-LD schemas](https://easeo.emiliano-go.com/concepts/schemas/) and [custom JSON-LD](https://easeo.emiliano-go.com/guides/custom-schemas/)
 - Open Graph: full og:type, title, description, image, locale, audio, video
 - Twitter Cards: summary_large_image by default, with image alt, site, creator
 - Robots directives: index/noindex, follow/nofollow, max-snippet, max-image-preview, max-video-preview
-- SEO contracts: machine-readable SEO intent for CI validation
-- Validation: built-in checks for title length, description, canonical format, OG image, robots directives
+- SEO contracts: machine-readable SEO intent for CI validation. See the [contract reference](https://easeo.emiliano-go.com/reference/contracts/)
+- Validation: built-in checks for title length, description, canonical format, OG image, robots directives. See [validation](https://easeo.emiliano-go.com/concepts/validation/)
 - Hashing: SHA-256 payload hashing and ETag generation
 - HTML rendering: complete head snippet with meta tags, OG, Twitter, JSON-LD
-- Extension points: config-scoped hooks and schema registries
+- Extension points: config-scoped hooks and schema registries. See [hooks](https://easeo.emiliano-go.com/guides/hooks/)
+
+Learn more in the [guides](https://easeo.emiliano-go.com/guides/) and start from a [recipe](https://easeo.emiliano-go.com/recipes/) such as a blog post, product page, or search results page.
 
 ## Packages
 
@@ -178,6 +184,8 @@ Given the same inputs, `easeo` always produces the same output. No timestamps, n
 | `easeo-core` | crates.io | Pure Rust engine with no I/O dependencies |
 
 ## Integrations
+
+Per-framework setup guides live in the [Integrations docs](https://easeo.emiliano-go.com/integrations/).
 
 ### JavaScript / TypeScript
 

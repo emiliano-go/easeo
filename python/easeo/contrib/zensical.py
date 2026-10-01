@@ -155,6 +155,18 @@ class EaseoPreprocessor(Preprocessor):
         og_image_autodetect: bool = True,
         og_image_warn: bool = True,
     ) -> None:
+        """Creates the preprocessor.
+
+        Args:
+            md: Markdown instance provided by Python Markdown.
+            seo_config: Configuration built from the extension options.
+            debug_dir: Directory for per-page payload JSON dumps, relative to
+                the project root. Disabled when ``None``.
+            has_default_og_image: Whether a default OG image was configured.
+            og_image_autodetect: Look for a conventional social card when no
+                default OG image is configured.
+            og_image_warn: Warn once when no social card can be found.
+        """
         super().__init__(md)
         self.seo_config = seo_config
         self.debug_dir = debug_dir
@@ -210,6 +222,18 @@ class EaseoPreprocessor(Preprocessor):
         return ""
 
     def run(self, lines: list[str]) -> list[str]:
+        """Builds the SEO payload for the current page.
+
+        Reads the page title, description, and URL from the Markdown context,
+        builds a deterministic payload, and stores the rendered head HTML in
+        ``page.meta["_seo_head"]``.
+
+        Args:
+            lines: Markdown source lines for the page.
+
+        Returns:
+            The unmodified lines, so the preprocessor stays content-neutral.
+        """
         if ContextPreprocessor is None:
             return lines
 
@@ -289,6 +313,12 @@ class EaseoExtension(Extension):
     name = "easeo.contrib.zensical"
 
     def __init__(self, **kwargs: Any) -> None:
+        """Creates the extension from ``zensical.toml`` options.
+
+        Args:
+            **kwargs: ``SEOConfig`` fields, plus ``debug_dir`` for per-page
+                payload dumps, ``og_image_autodetect``, and ``og_image_warn``.
+        """
         super().__init__()
         self._debug_dir = kwargs.pop("debug_dir", None)
         self._has_default_og_image = bool(kwargs.get("default_og_image"))
@@ -297,6 +327,11 @@ class EaseoExtension(Extension):
         self._seo_config = _build_seo_config(**kwargs)
 
     def extendMarkdown(self, md: Any) -> None:
+        """Registers the easeo preprocessor with the Markdown instance.
+
+        Args:
+            md: Markdown instance provided by Python Markdown.
+        """
         md.registerExtension(self)
         preprocessor = EaseoPreprocessor(
             md,
