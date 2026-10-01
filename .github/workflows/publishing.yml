@@ -246,6 +246,8 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
+          # Re-runs after a partial failure can upload files PyPI already has.
+          skip-existing: true
 
   # ===========================================================================
   # Publish easeo-core to crates.io (OIDC trusted publishing)
